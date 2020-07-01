@@ -419,3 +419,64 @@ multiplot(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, cols=4)
 dev.copy2pdf(device = cairo_pdf,
              file = 'RepvsRep_NonEvo_non0.pdf',
              width = 10, height = 8, useDingbats = FALSE)
+
+
+
+
+#############
+### outlier detection
+library(OutlierDetection)
+library("factoextra")
+library(dbscan)
+# filter evo strains, set the table in wide 
+# set threshold
+thr = 0.1
+met0_filt = data %>% filter(Metformin_mM == 0) %>%
+  filter(!Strain %in% exp_str) %>%
+  select(ID, Replicate, AUC_raw) %>%
+  pivot_wider(names_from = Replicate, values_from = AUC_raw, names_prefix = 'rep_') 
+
+# get the list of weird strains
+weird_st = met0_filt %>% filter(rep_1 <= thr | rep_2 <= thr | rep_3 <= thr) %>%
+  select(ID) %>% as.vector %>% t %>% as.character
+
+# remove names
+met0_filt = met0_filt %>% filter(!ID %in% weird_st)
+X = met0_filt[,2:4]
+
+# detect outliers 
+outs = dens(met0_filt[,2:4],k=4, C=1, cutoff = 0.97)
+met0_filt[outs$`Location of Outlier`,]
+outs
+
+
+# another method
+depthout(met0_filt[,2:4], rnames = FALSE, cutoff = 0.05, boottimes = 100)
+
+
+# another method
+disp(met0_filt[,2:4], cutoff = 0.95, rnames = FALSE, boottimes = 1000)
+
+# Mahalanobis
+maha(met0_filt[,2:4], cutoff = 0.95, rnames = FALSE)
+
+# k nearest
+nn(met0_filt[,2:4], k = 4, cutoff = 0.98, Method = "euclidean",
+   rnames = FALSE, boottimes = 100)
+# kth nearest
+nnk(met0_filt[,2:4], k = 4, cutoff = 0.97, Method = "euclidean",
+    rnames = FALSE, boottimes = 100)
+
+# master method
+outs = OutlierDetection(met0_filt[,2:4], k = 5, cutoff = 0.98,
+                 Method = "euclidean", rnames = met0_filt[,1], dispersion = TRUE)
+
+outs
+outs$`Outlier Observations`
+
+
+#dbscan
+db = dbscan(met0_filt[,2:4], eps = 1,  minPts = 5)
+fviz_cluster(db,met0_filt[,2:4])
+fviz_cluster(db,met0_filt[,2:4], axes = c(2,3))
+
