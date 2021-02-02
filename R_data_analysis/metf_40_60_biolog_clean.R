@@ -12,62 +12,9 @@ library(PFun)
 
 ### custom functions ####
 
-# I extracted this one from the synergyfinder package
-ExtendedScores <-  function (scores.mat, len) {
-  # len: how many values need to be predicted between two adjacent elements
-  #      of scores.dose
-  options(scipen = 999)
-  nr <- nrow(scores.mat)
-  nc <- ncol(scores.mat)
-  
-  # missing value imputation
-  while (sum(is.na(scores.mat))) {
-    scores.mat <- ImputeNA(scores.mat)
-  }
-  ext.row.len <- (nr - 1) * (len + 2) - (nr - 2)
-  ext.col.len <- (nc - 1) * (len + 2) - (nc - 2)
-  
-  extended.row.idx <- seq(1, nr, length = ext.row.len)
-  extended.col.idx <- seq(1, nc, length = ext.col.len)
-  
-  krig.coord <- cbind(rep(extended.row.idx, each = ext.col.len),
-                      rep(extended.col.idx, times = ext.row.len))
-  extended.scores <- kriging(data = c(scores.mat),
-                             data.coord = cbind(rep(seq_len(nr), nc),
-                                                rep(seq_len(nc), each=nr)),
-                             krig.coord = krig.coord,
-                             cov.mod = "whitmat", grid = FALSE,
-                             sill = 1, range = 10,
-                             smooth = 0.8)$krig.est
-  extended.scores <- matrix(extended.scores, nrow = ext.row.len,
-                            ncol = ext.col.len, byrow = TRUE)
-  
-  # extended.scores = data.frame(extended.scores)
-  extended.scores <- round(extended.scores, 3)
-  
-  row.dose <- as.numeric(rownames(scores.mat))
-  col.dose <- as.numeric(colnames(scores.mat))
-  
-  extend.row.dose <- mapply(function(x, y){seq(from = x, to = y,
-                                               length.out = len + 2)},
-                            row.dose[-nr], row.dose[-1])
-  extend.row.dose <- unique(round(c(extend.row.dose), 8))
-  
-  extend.col.dose <- mapply(function(x, y){seq(from = x, to = y,
-                                               length.out = len + 2)},
-                            col.dose[-nc], col.dose[-1])
-  extend.col.dose <- unique(round(c(extend.col.dose), 8))
-  
-  rownames(extended.scores) <- extend.row.dose
-  colnames(extended.scores) <- extend.col.dose
-  
-  return(extended.scores)
-}
-
-
 # set wd
 # I unpacked Sim’s biolog file here, you can do it wherever you want in your computers
-setwd("D:/MRC_Postdoc/Pangenomic/biolog/Biolog_metf_40_60")
+# setwd("D:/MRC_Postdoc/Pangenomic/biolog/Biolog_metf_40_60")
 
 ### Load data ####
 
@@ -247,6 +194,79 @@ data.sum %>%
         plot.title = element_text(hjust = 0.5, size = 5,
                                   color = 'black')) 
 
+plates = c("PM11C", "PM12B", "PM13B", "PM14A", "PM15B", "PM16A", "PM17A", "PM18C", "PM19" , "PM20B")
+
+plot_list = list()
+for (i in 1:length(plates)){
+  p = data.sum %>%
+    ungroup %>%
+    mutate(Metformin_mM = as.factor(Metformin_mM),
+           DrugConc = str_sub(MetaboliteU, -1)) %>%
+    filter(Plate == plates[i]) %>%
+    ggplot(aes(x = DrugConc, y = Mean, colour = Metformin_mM, fill = Metformin_mM, group = Metformin_mM)) +
+    geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.2) +
+    geom_line(size = 1) +
+    theme_classic() +
+    facet_wrap(~Metabolite) +
+    theme(strip.text = element_text(size = 5),
+          plot.title = element_text(hjust = 0.5, size = 5,
+                                    color = 'black')) +
+    labs(title = as.character(plates[i]))
+  
+  plot_list[[i]] = p
+}
+
+# save multiple plots into one big file
+ggsave(file = here('summary', 'line_plots.pdf'), marrangeGrob(grobs = plot_list, nrow = 1, ncol = 1),
+       width = 11, height = 7)
+
+# boxplots ----------------------------------------------------------------
+
+library(gridExtra)
+
+data_id = data %>% 
+  unite(Met_ID, Metabolite, Plate, sep = '_', remove = F)
+
+ids = unique(data_id$Met_ID)
+
+
+plot_list = list()
+for (i in 1:length(ids)){
+  p = data_id %>% 
+    mutate(MetaboliteU = as.factor(MetaboliteU),
+           Metformin_mM = as.factor(Metformin_mM)) %>% 
+    filter(Met_ID == ids[i]) %>% 
+    ggplot(aes(x = MetaboliteU, y = AUC_raw, fill = Metformin_mM)) +
+    geom_boxplot() +
+    geom_point(position = position_jitterdodge()) +
+    theme_light() +
+    labs(title = as.character(ids[i]))
+  
+  plot_list[[i]] = p
+}
+
+# save multiple plots into one big file
+ggsave(file = here('summary', 'AUC_Boxplots.pdf'), marrangeGrob(grobs = plot_list, nrow = 1, ncol = 1),
+       width = 11, height = 7)
+
+
+
+data_id %>% 
+  mutate(MetaboliteU = as.factor(MetaboliteU),
+         Metformin_mM = as.factor(Metformin_mM)) %>% 
+  filter(Met_ID == ids[5]) %>% 
+  ggplot(aes(x = MetaboliteU, y = AUC_raw, fill = Metformin_mM)) +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge()) +
+  theme_light() +
+  labs(title = as.character(ids[5]))
+
+
+      
+
+data %>% 
+  mutate(MetaboliteU = as.factor(MetaboliteU)) %>% 
+  filter(Plate == 'PM11C')
 
 
 # # # # # # # # # # # # # # 
@@ -513,6 +533,183 @@ write.csv(complete.test %>%
 write.csv(complete.test %>%
             filter(PairIndex >= 180), here('summary','SynergyFinder_dataset4.csv'), row.names = FALSE)
 
+
+
+
+# heatmaps synergyfinder --------------------------------------------------
+
+syn_bliss = bliss %>% 
+  # separate(Drug.combination, into = c('Drug2','Plate'), sep = '_' ) %>% 
+  mutate(Direction = case_when(Synergy.score > 4 ~ 'Synergy',
+                               Synergy.score > -4 & Synergy.score <= 4 ~ 'Neutral',
+                               Synergy.score <= -4 ~ 'Antagonism')) %>% 
+  select(Drug2 = Drug.combination, Direction)
+
+complete.test2 = complete.test %>% 
+  # filter(Drug2 == 'Amikacin_PM11C') %>%
+  mutate(Growth = 100 - Response) %>%
+  left_join(syn_bliss)
+
+complete.test %>% 
+  # filter(Drug2 == 'Amikacin_PM11C') %>%
+  mutate(Growth = 100 - Response) %>%
+  left_join(syn_bliss) %>% 
+  ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+  geom_tile() +
+  labs(x = 'Metformin',
+       y = 'Query drug') +
+  scale_fill_gradient(low = "#FAF35E", high = "#FF2B29", 
+                      limits = c(0,120)) +
+  theme_classic() + 
+  facet_wrap(~Drug2)
+
+ggsave(here('summary', 'heatmaps_COMPLETE.pdf'), device = 'pdf', height = 26, width = 32)
+
+
+
+complete.test %>% 
+  # filter(Drug2 == 'Amikacin_PM11C') %>%
+  mutate(Growth = 100 - Response) %>%
+  left_join(syn_bliss) %>% 
+  ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+  geom_tile() +
+  labs(x = 'Metformin',
+       y = 'Query drug') +
+  scale_fill_gradient(low = "white", high = "#263EE0", 
+                      limits = c(0,120)) +
+  theme_classic() + 
+  facet_wrap(~Drug2)
+
+ggsave(here('summary', 'heatmaps_COMPLETE_v3.pdf'), device = 'pdf', height = 26, width = 32)
+
+
+
+## LOOP TO GENERATE INDIVIDUAL PLOTS WITH COLOURS DEPENDING ON THEIR SYNERGY DIRECTION
+plots = list()
+
+for (drug in drug_list) {
+  if (complete.test2[complete.test2$Drug2 == drug,]$Direction == 'Synergy'){
+    p = complete.test2 %>% 
+      filter(Drug2 == drug) %>%
+      # mutate(Growth = 100 - Response) %>% 
+      ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+      geom_tile() +
+      labs(x = '',
+           y = '') +
+      scale_fill_gradient(low = "white", high = "red", 
+                          limits = c(0,120)) +
+      theme_classic() + 
+      facet_wrap(~Drug2) +
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank(),
+            legend.position = "none")
+    
+      
+    plots[[drug]] = p
+  } else if (complete.test2[complete.test2$Drug2 == drug,]$Direction == 'Neutral'){
+    p = complete.test2 %>% 
+      filter(Drug2 == drug) %>%
+      # mutate(Growth = 100 - Response) %>% 
+      ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+      geom_tile() +
+      labs(x = '',
+           y = '') +
+      scale_fill_gradient(low = "white", high = "grey50", 
+                          limits = c(0,120)) +
+      theme_classic() + 
+      facet_wrap(~Drug2) +
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank(),
+            legend.position = "none")
+    
+    plots[[drug]] = p
+  }else{
+    p = complete.test2 %>% 
+      filter(Drug2 == drug) %>%
+      # mutate(Growth = 100 - Response) %>% 
+      ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+      geom_tile() +
+      labs(x = '',
+           y = ''
+           ) +
+      scale_fill_gradient(low = "white", high = "#00F040", 
+                          limits = c(0,120)) +
+      theme_classic() + 
+      facet_wrap(~Drug2) + 
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank(),
+            legend.position = "none")
+    
+    plots[[drug]] = p
+  }
+}
+
+
+total_p = gridExtra::grid.arrange(grobs = plots)
+
+ggsave(plot = total_p,here('summary', 'heatmaps_COMPLETE_v2.pdf'), device = 'pdf', height = 26, width = 32)
+
+
+
+drug_list = complete.test %>% filter(Drug2 != 'Compound 48/80_PM17A') %>% distinct(Drug2) %>% t %>% as.character
+
+for (drug in drug_list){
+  p = complete.test %>% 
+    filter(Drug2 == drug) %>%
+    mutate(Growth = 100 - Response) %>% 
+    ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+    geom_tile() +
+    labs(x = 'Metformin',
+         y = 'Query drug',
+         title = drug) +
+    scale_fill_gradient(low = "#FAF35E", high = "#FF2B29", 
+                        limits = c(0,120)) +
+    theme_classic() + 
+    facet_wrap(~Drug2)
+  ggsave(plot = p, here('summary/heatmaps',filename = paste0(drug,'_heatmap.pdf') ),device = 'pdf',
+         width = 12, height = 11, units = 'cm')
+}
+
+# antagonits plot for presentation
+
+drug = 'Lithium chloride_PM17A'
+complete.test %>% 
+  filter(Drug2 == drug) %>%
+  mutate(Growth = 100 - Response) %>% 
+  ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+  geom_tile() +
+  labs(x = 'Metformin',
+       y = 'Query drug') +
+  scale_fill_gradient(low = 'white', high = "#00F040", 
+                      limits = c(0,120)) +
+  theme_classic() +
+  facet_wrap(~Drug2)
+
+ggsave(here('summary/heatmaps',filename = paste0(drug,'_heatmap.pdf') ),device = 'pdf',
+       width = 8, height = 7, units = 'cm')
+
+
+
+# synergy plot for presentation
+
+drug = 'Diamide_PM16A'
+complete.test %>% 
+  filter(Drug2 == drug) %>%
+  mutate(Growth = 100 - Response) %>% 
+  ggplot(aes(x = Conc1, y = Conc2, fill = Growth)) +
+  geom_tile() +
+  labs(x = 'Metformin',
+       y = 'Query drug') +
+  scale_fill_gradient(low = 'white', high = "#E3200B", 
+                      limits = c(0,120)) +
+  theme_classic() +
+  facet_wrap(~Drug2)
+
+ggsave(here('summary/heatmaps',filename = paste0(drug,'_heatmap.pdf') ),device = 'pdf',
+       width = 8, height = 7, units = 'cm')
 
 
 # # # # # # # # # # # # #

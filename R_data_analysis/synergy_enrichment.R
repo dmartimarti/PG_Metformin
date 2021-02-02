@@ -154,7 +154,12 @@ target.res = enrich(syn, ant, biolog, 'Target')
 process.res = enrich(syn, ant, biolog, 'Process')
 
 
-sig = 0.1
+
+
+
+
+# plot
+sig = 0.05
 df = target.res %>%
   mutate(Comparison = 'Target') %>%
   bind_rows(mol.res %>% mutate(Comparison = 'Molecule'), 
@@ -175,8 +180,9 @@ p.theme = theme(axis.ticks = element_blank(), panel.border = element_blank(),
                 panel.grid.major = element_blank(), axis.line = element_line(colour = NA), 
                 axis.line.x = element_line(colour = NA), axis.line.y = element_line(colour = NA), 
                 strip.text = element_text(colour = "black", face = "bold", 
-                                          size = 7), axis.text.x = element_text(face = "bold", 
-                                                                                 colour = "black", size = 10, angle = 45, hjust = 1))
+                                          size = 7), 
+                axis.text.x = element_text(face = "bold", 
+                                           colour = "black", size = 10, angle = 45, hjust = 1))
 
 
 # plot enrichment p-values
@@ -196,6 +202,39 @@ df %>%
 dev.copy2pdf(device = cairo_pdf,
              file = here('summary', 'Drug_enrichment_relaxed.pdf'),
              width = 8, height = 7, useDingbats = FALSE)
+
+
+
+
+# plot with new colours
+df %>% 
+  filter(p.value <= 0.1) %>% 
+  mutate(Category = cut(p.value, 
+                        breaks=c(-Inf, 0.001,  0.01, 0.05, 0.1, Inf), 
+                        labels=c("<0.001","<0.01","<0.05", '<0.1', 'NS') )) %>% 
+  ggplot(aes(y = Class, x = Direction, fill = Category)) +
+  geom_tile() +
+  labs(
+    x = 'Direction',
+    y = 'Terms'
+  ) +
+  scale_fill_manual(values = c('#2229F0', '#2292F0', '#22E4F0', '#C7F0F0', 'white'),
+                    name = 'P-val') +
+  facet_wrap(~Comparison, scales = 'free_y') +
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "bold", 
+                                   colour = "black",
+                                   size = 10, 
+                                   angle = 45, 
+                                   hjust = 1))
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('summary', 'Drug_enrichment_relaxed_Pval.pdf'),
+             width = 8, height = 7, useDingbats = FALSE)
+
+
+
+
 
 
 

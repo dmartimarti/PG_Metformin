@@ -409,7 +409,7 @@ fig
 # # # # # # # # # # # # # # # # # #
 
 
-bliss = read_csv('D:/MRC_Postdoc/Pangenomic/biolog/Biolog_metf_40_60/summary/Bliss_scores_corrected.csv')
+bliss = read_csv('D:/MRC_Postdoc/Pangenomic/biolog/drug_drug_screen/summary/Bliss_scores_corrected.csv')
 
 bliss = bliss %>% separate(Drug.combination, c('Drug', 'Plate'), sep = '_')
 
@@ -490,6 +490,37 @@ fig = fig %>%
 
 
 fig
+
+
+
+# drugs ordered by synergy ------------------------------------------------
+
+
+# initiate the threshold
+thrs = 4
+
+### BE CAREFUL AND CHOSE A SPECIFIC WAY TO SEPARATE COMPOUNDS
+# classify by CI_low
+bliss.tsne = bliss %>% 
+  mutate(CI_low = abs(Synergy.score) - abs(CI),
+         CI_up = abs(Synergy.score) + abs(CI),
+         Direction = ifelse(CI_low > thrs & Synergy.score < 0, 'Antagonistic', 
+                            ifelse(CI_low > thrs & Synergy.score > 0, 'Synergistic', 'Neutral')),
+         Drug = fct_reorder(Drug, desc(Synergy.score))) %>%
+  rename(Drugbank = Drug)
+
+bliss.tsne %>%
+  ggplot(aes(x = Drugbank, y = Synergy.score, colour = Direction)) +
+  geom_hline(yintercept = 0, size = 1, colour = 'grey50') +
+  geom_errorbar(aes(x = Drugbank, ymin = Synergy.score - CI, ymax = Synergy.score + CI)) +
+  geom_point(size = 2) +
+  annotate(geom = "rect", xmin = 0, xmax = Inf, ymin = -thrs, ymax = thrs, # draw rectangle
+           fill = "grey50", colour = "black", alpha = 0.5) +
+  theme_classic() +
+  scale_colour_manual(values = c('#2DB814', '#8F8F8C','#BD2924')) +
+  theme(axis.text.x = element_text(angle = 45, hjust  = 1, size = 3.5)) 
+
+ggsave('Scores_ordered_BLISS.pdf', height = 7, width = 10)
 
 
 ### ML Prediction ####
