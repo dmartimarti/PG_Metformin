@@ -53,6 +53,83 @@ biofilm_strain_annotation = read_excel("201201_biofilm_annotation_australian_str
   unite('ID', Position, PG, remove=FALSE)
 
 
+# read the other replicates
+# rep 1
+annot_1 = read_excel("201201_biofilm_annotation_australian_strains.xlsx", sheet = 'rep1') %>% 
+  rename(PG = Plate) %>% 
+  mutate(Strain = case_when(Strain == 'OP50' ~ '0',
+                            TRUE ~ Strain),
+         Strain = as.numeric(Strain)) %>% 
+  unite('ID', Position, PG, remove=FALSE)
+# rep2
+annot_2 = read_excel("201201_biofilm_annotation_australian_strains.xlsx", sheet = 'rep2') %>% 
+  rename(PG = Plate) %>% 
+  mutate(Strain = case_when(Strain == 'OP50' ~ '0',
+                            TRUE ~ Strain),
+         Strain = as.numeric(Strain)) %>% 
+  unite('ID', Position, PG, remove=FALSE)
+# rep3 
+annot_3 = read_excel("201201_biofilm_annotation_australian_strains.xlsx", sheet = 'rep3') %>% 
+  rename(PG = Plate) %>% 
+  mutate(Strain = case_when(Strain == 'OP50' ~ '0',
+                            TRUE ~ Strain),
+         Strain = as.numeric(Strain)) %>% 
+  unite('ID', Position, PG, remove=FALSE)
+# rep 4
+annot_4 = read_excel("201201_biofilm_annotation_australian_strains.xlsx", sheet = 'rep4') %>% 
+  rename(PG = Plate) %>% 
+  mutate(Strain = case_when(Strain == 'OP50' ~ '0',
+                            TRUE ~ Strain),
+         Strain = as.numeric(Strain)) %>%
+  unite('ID', Position, PG, remove=FALSE)
+
+
+## let's see which category we chose 
+annot = annot_1 %>% bind_rows(annot_2,annot_3,annot_4) 
+
+# there are some "lawn_finished" that I'm going to change as to 'normal'
+annot %>% count(Annotation_50mM)
+
+
+annot = annot %>% 
+  mutate(Annotation_0mM = case_when(Annotation_0mM == 'lawn_finished' ~ 'normal',
+                                    TRUE ~ Annotation_0mM),
+         Annotation_50mM = case_when(Annotation_50mM =='lawn_finished' ~ 'normal',
+                                     TRUE ~ Annotation_50mM)) %>%
+  filter(Annotation_0mM != 'n/a') %>% 
+  mutate(pheno_0mM = case_when(Annotation_0mM == 'normal' ~ 0,
+                               Annotation_0mM == 'biofilm' ~ 1,
+                               Annotation_0mM == 'super_biofilm'~2),
+         pheno_50mM = case_when(Annotation_50mM == 'normal' ~ 0,
+                               Annotation_50mM == 'biofilm' ~ 1,
+                               Annotation_50mM == 'super_biofilm'~2))
+
+
+# calculate mean and median
+annot.sum = annot %>% group_by(ID, PG, Well) %>% 
+  summarise(Mean_0 = mean(pheno_0mM, na.rm = T),
+            Median_0 = median(pheno_0mM, na.rm = T),
+            Mean_50  = mean(pheno_50mM, na.rm = T),
+            Median_50 = median(pheno_50mM, na.rm = T),
+            Med_0_round= round(Median_0,0),
+            Med_50_round = round(Median_50,0))
+
+annot.sum = annot.sum %>% mutate(Annotation_0mM = case_when(Med_0_round == 0 ~ 'normal',
+                                                Med_0_round == 1 ~ 'biofilm',
+                                                Med_0_round == 2 ~ 'super_biofilm'),
+                     Annotation_50mM = case_when(Med_50_round == 0 ~ 'normal',
+                                                Med_50_round == 1 ~ 'biofilm',
+                                                Med_50_round == 2 ~ 'super_biofilm'))
+
+
+# THIS METADATA HAS THE MEDIAN OF THE PHENOTYPE ROUNDED UP
+biofilm_strain_annotation = biofilm_strain_annotation %>% select(-Annotation_0mM, -Annotation_50mM) %>% 
+  left_join(annot.sum %>% select(ID, Annotation_0mM, Annotation_50mM)) %>% 
+  select(ID:Strain, Annotation_0mM, Annotation_50mM, notes)
+
+
+
+
 
 # join everything to have names, IDs and all that stuff in one table
 data_filt_full = data_filt_full %>%
@@ -104,12 +181,6 @@ test_50 = data_filt_full %>%
   mutate(test_PG = as.factor(test_PG))
 
 test_50 %>% ggplot(aes(x = test_PG,y=Mean_Intensity, fill = test_PG)) + geom_boxplot()
-
-
-model = aov(test_PG ~ Mean_Intensity,data=test_50)
-
-
-
 
 
 
@@ -449,6 +520,7 @@ write.xlsx(list_of_datasets, here('exploration', 'worm_imaging_stats.xlsx'), col
 # mean plots
 stat_res %>% 
   mutate(ID = fct_reorder(ID, desc(Met_0mM))) %>% 
+  drop_na(Annotation_0mM) %>% 
   ggplot(aes(x=ID, y = Met_0mM, colour = Annotation_0mM)) +
   geom_point()+
   theme_classic() +
@@ -460,6 +532,7 @@ ggsave(here('exploration','Met0mM_ordered.pdf'),height = 7,width = 17)
 
 
 stat_res %>% 
+  drop_na(Annotation_50mM) %>% 
   mutate(ID = fct_reorder(ID, desc(Met_50mM))) %>% 
   ggplot(aes(x=ID, y = Met_50mM, colour = Annotation_50mM)) +
   geom_point()+
