@@ -128,6 +128,8 @@ biofilm_strain_annotation = biofilm_strain_annotation %>% select(-Annotation_0mM
   select(ID:Strain, Annotation_0mM, Annotation_50mM, notes)
 
 
+# save the metadata
+write.xlsx(biofilm_strain_annotation, '201201_biofilm_annotation_australian_strains_AVERAGE.xlsx')
 
 
 
@@ -135,9 +137,12 @@ biofilm_strain_annotation = biofilm_strain_annotation %>% select(-Annotation_0mM
 data_filt_full = data_filt_full %>%
   left_join(biofilm_strain_annotation,by=c('ID','PG')) %>%
   mutate(Metf = factor(Metf, levels = c('0mM', '50mM'))) %>% 
-  select(PG, Well, Metf, Annotation_0mM , Annotation_50mM,everything())
-
-
+  select(PG, Well, Metf, Annotation_0mM , Annotation_50mM,everything()) %>% 
+  replace_na(list('notes' = 'normal'))
+# 
+# data_filt_full %>% filter(ID=='13_PG2') %>% select(notes, everything()) %>% view()
+# 
+# data_filt_full %>% filter(notes=='contaminated') %>% select(notes, everything()) %>% view()
 
 # exploratory plots -------------------------------------------------------
 
@@ -331,7 +336,7 @@ for (plate in plates){
 
 # number of worms per condition and plate (reps joined)
 for (plate in plates){
-  p = data_filt %>%
+  p = data_filt_mad %>%
     # filter(Probability_of_SingleWorm > 0.6) %>%
     filter(PG == plate) %>%
     mutate(Well = factor(Well, levels = lvls)) %>%
