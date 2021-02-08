@@ -359,8 +359,6 @@ gene_presence_absence <- read_delim("D:/MRC_Postdoc/Pangenomic/phylo/original_da
 summary.wb = read_excel("Summary_worm_bacteria.xlsx") %>% select(-`...1`)
 
 
-
-
 # create df
 genes = COGs_worm$variant
 
@@ -370,6 +368,8 @@ summary_FC_bygene['FC'] = 0
 # # # # # # # # # # 
 ## RUN ONLY ONCE ##
 # # # # # # # # # #
+# Just a note, I removed all the strains that were not suitable 
+# from the worm experiments as well
 
 for (i in 1:length(genes)){
   
@@ -382,7 +382,7 @@ for (i in 1:length(genes)){
     select(-number) %>%
     left_join(summary.wb) %>%
     filter(Worm_metf_0 < 4000,
-           biofilm_50mM == 'normal') %>%
+           biofilm_50mM == 'normal') %>%   # FILTERS
     mutate(presence = as.factor(presence))%>% 
     group_by(presence) %>% 
     summarise(mean = mean(FC_worm)) %>% 
@@ -567,8 +567,48 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
+# ANN data preparation ----------------------------------------------------
+
+# here I'll prepare the data to see if I can fit a simple neural network
+
+# first let's work the gene matrix
+# create a copy just in case
+gene_presence_absence_alt = gene_presence_absence
+
+# remove singletons
+gene_presence_absence_alt = gene_presence_absence_alt %>% 
+  rowwise(Gene) %>% 
+  mutate( suma = sum(c_across(where(is.numeric))), .before = NT12001_189) %>% 
+  filter(suma > 1) %>% 
+  select(-suma)
+
+# make the transpose
+gene_presence_absence_alt = gene_presence_absence_alt %>%
+  gather(key = ID, value = val, 2:ncol(gene_presence_absence_alt)) %>% 
+  spread(Gene, val)
+
+gene_presence_absence_alt = gene_presence_absence_alt %>% 
+  mutate(ID = str_split(ID, pattern = '_', simplify = TRUE)[,1])
 
 
+
+
+
+neural_net_test = summary.wb %>% 
+  filter(biofilm_50mM == 'normal',
+         Worm_metf_0 < 4000) %>% 
+  drop_na(phylogroup) %>% 
+  arrange(ID) %>% 
+  distinct(ID, .keep_all = T) %>% 
+  select(-(SD_Bact_metf_0:SD_Bact_metf_200),-Strainname,-PG,-Well,-B_phenotype,
+         -biofilm_0mM,-biofilm_50mM,-log2FC_worm) %>% 
+  replace_na(list(Broadphenotype = 'Unknown')) %>% 
+  left_join(gene_presence_absence_alt) %>% 
+  select(-ID)
+
+
+y_data = neural_net_test$FC_worm %>% write.table(here('NN','y_data.csv'),quote=F, col.names = F, row.names = F)
+x_data = neural_net_test %>% select(-FC_worm) %>% write_csv(here('NN','x_data.csv'))
 
 
 
