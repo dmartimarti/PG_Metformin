@@ -491,7 +491,12 @@ stat_res %>%
 
 
 
-
+stat_res2 %>% 
+  filter(biofilm_50mM == 'normal', 
+         Met_0mM < 4000) %>% 
+  drop_na(phylogroup) %>%
+  filter(!(phylogroup %in% c('cladeI','Non Escherichia'))) %>% 
+  write_csv(here('analysis','worm_imaging_SUBSET.csv'))
 
 
 
