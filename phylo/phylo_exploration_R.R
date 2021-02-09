@@ -569,6 +569,8 @@ dev.copy2pdf(device = cairo_pdf,
 
 # ANN data preparation ----------------------------------------------------
 
+### General case ####
+
 # here I'll prepare the data to see if I can fit a simple neural network
 
 # first let's work the gene matrix
@@ -579,7 +581,7 @@ gene_presence_absence_alt = gene_presence_absence
 gene_presence_absence_alt = gene_presence_absence_alt %>% 
   rowwise(Gene) %>% 
   mutate( suma = sum(c_across(where(is.numeric))), .before = NT12001_189) %>% 
-  filter(suma > 1) %>% 
+  filter(suma > 27) %>% 
   select(-suma)
 
 # make the transpose
@@ -601,14 +603,95 @@ neural_net_test = summary.wb %>%
   arrange(ID) %>% 
   distinct(ID, .keep_all = T) %>% 
   select(-(SD_Bact_metf_0:SD_Bact_metf_200),-Strainname,-PG,-Well,-B_phenotype,
-         -biofilm_0mM,-biofilm_50mM,-log2FC_worm) %>% 
+         -biofilm_0mM,-biofilm_50mM,-log2FC_worm, -(p.value:FDR_stars)) %>% 
   replace_na(list(Broadphenotype = 'Unknown')) %>% 
   left_join(gene_presence_absence_alt) %>% 
-  select(-ID)
+  select(-ID) %>% 
+  drop_na(`aaaT~~~aaaT_1~~~aaaT_2`)
 
 
-y_data = neural_net_test$FC_worm %>% write.table(here('NN','y_data.csv'),quote=F, col.names = F, row.names = F)
-x_data = neural_net_test %>% select(-FC_worm) %>% write_csv(here('NN','x_data.csv'))
+y_data = neural_net_test$FC_worm %>% write.table(here('NN','y_data_TOTAL.csv'),quote=F, col.names = F, row.names = F)
+x_data = neural_net_test %>% select(-FC_worm) %>% write_csv(here('NN','x_data_TOTAL.csv'))
 
+
+
+
+
+### Selected genes ####
+
+# now we'll work with the set of genes that are 
+
+# first let's work the gene matrix
+# create a copy just in case
+
+# use these filters
+COGs_worm %>% 
+  filter(`filter-pvalue` < 0.0001)
+COGs_worm %>% 
+  filter(`lrt-pvalue` < 0.001)
+
+
+COG_worm_genes = COGs_worm %>% 
+  filter(`filter-pvalue` < 0.00001 | `lrt-pvalue` < 0.001) %>% 
+  select(variant) %>% t %>% as.character
+
+COGs_worm %>% 
+  filter(`filter-pvalue` < 0.001 | `lrt-pvalue` < 0.001) %>% 
+  filter(!(str_detect(variant, 'group'))) %>% 
+  mutate(variant = str_split(variant,pattern = '_', simplify = TRUE)[,1]) %>% 
+  distinct(variant) %>% t %>% as.character %>% 
+  write.table(here('pyseer/enrichment_COGs_worm','gene_list.txt'),quote = F,
+              col.names = F,row.names = F)
+
+
+gene_presence_absence_alt = gene_presence_absence %>% filter(Gene %in% COG_worm_genes)
+
+# make the transpose
+gene_presence_absence_alt = gene_presence_absence_alt %>%
+  gather(key = ID, value = val, 2:ncol(gene_presence_absence_alt)) %>% 
+  spread(Gene, val)
+
+gene_presence_absence_alt = gene_presence_absence_alt %>% 
+  mutate(ID = str_split(ID, pattern = '_', simplify = TRUE)[,1])
+
+
+
+
+
+neural_net_test = summary.wb %>% 
+  filter(biofilm_50mM == 'normal',
+         Worm_metf_0 < 4000) %>% 
+  drop_na(phylogroup) %>% 
+  arrange(ID) %>% 
+  distinct(ID, .keep_all = T) %>% 
+  select(-(SD_Bact_metf_0:SD_Bact_metf_200),-Strainname,-PG,-Well,-B_phenotype,
+         -biofilm_0mM,-biofilm_50mM,-log2FC_worm, -(p.value:FDR_stars)) %>% 
+  replace_na(list(Broadphenotype = 'Unknown')) %>% 
+  left_join(gene_presence_absence_alt) %>% 
+  select(-ID) %>% 
+  drop_na()
+
+# let's add some dummy variables
+quantile(neural_net_test$FC_worm, probs = seq(0,1,0.1))
+quantile(neural_net_test$Worm_metf_0, probs = seq(0,1,0.1))
+quantile(neural_net_test$Worm_metf_50, probs = seq(0,1,0.1))
+
+# use 20 and 80% to classify levels
+neural_net_test = neural_net_test %>% 
+  mutate(FC_class = case_when(FC_worm < 1.34 ~ 'low',
+                              FC_worm > 1.34 & FC_worm < 2.19 ~ 'medium',
+                              FC_worm > 2.19 ~ 'large'),
+         met0_class = case_when(Worm_metf_0 < 2063.449 ~ 'low',
+                                Worm_metf_0 > 2063.449 & Worm_metf_0 < 2695.322 ~ 'medium',
+                                Worm_metf_0 > 2695.322 ~ 'large'),
+         met50_class = case_when(Worm_metf_50 < 3183.408 ~ 'low',
+                                 Worm_metf_50 > 3183.408 & Worm_metf_50 < 5241.525 ~ 'medium',
+                                 Worm_metf_50 > 5241.525 ~ 'large'),
+         .before = phylogroup)
+
+
+
+y_data = neural_net_test$FC_worm %>% write.table(here('NN','y_data_COG_worm.csv'),quote=F, col.names = F, row.names = F)
+x_data = neural_net_test %>% select(-FC_worm) %>% write_csv(here('NN','x_data_COG_worm.csv'))
 
 
