@@ -610,6 +610,22 @@ neural_net_test = summary.wb %>%
   drop_na(`aaaT~~~aaaT_1~~~aaaT_2`)
 
 
+# use 20 and 80% to classify levels
+neural_net_test = neural_net_test %>% 
+  mutate(FC_class = case_when(FC_worm < 1.34 ~ 'low',
+                              FC_worm > 1.34 & FC_worm < 2.19 ~ 'medium',
+                              FC_worm > 2.19 ~ 'large'),
+         met0_class = case_when(Worm_metf_0 < 2063.449 ~ 'low',
+                                Worm_metf_0 > 2063.449 & Worm_metf_0 < 2695.322 ~ 'medium',
+                                Worm_metf_0 > 2695.322 ~ 'large'),
+         met50_class = case_when(Worm_metf_50 < 3183.408 ~ 'low',
+                                 Worm_metf_50 > 3183.408 & Worm_metf_50 < 5241.525 ~ 'medium',
+                                 Worm_metf_50 > 5241.525 ~ 'large'),
+         .before = phylogroup)
+
+
+
+
 y_data = neural_net_test$FC_worm %>% write.table(here('NN','y_data_TOTAL.csv'),quote=F, col.names = F, row.names = F)
 x_data = neural_net_test %>% select(-FC_worm) %>% write_csv(here('NN','x_data_TOTAL.csv'))
 
@@ -669,12 +685,15 @@ neural_net_test = summary.wb %>%
   replace_na(list(Broadphenotype = 'Unknown')) %>% 
   left_join(gene_presence_absence_alt) %>% 
   select(-ID) %>% 
-  drop_na()
+  filter(!(phylogroup %in% c('cladeI','Non Escherichia')))
 
 # let's add some dummy variables
 quantile(neural_net_test$FC_worm, probs = seq(0,1,0.1))
 quantile(neural_net_test$Worm_metf_0, probs = seq(0,1,0.1))
 quantile(neural_net_test$Worm_metf_50, probs = seq(0,1,0.1))
+
+neural_net_test %>% 
+  ggplot(aes(x = ))
 
 # use 20 and 80% to classify levels
 neural_net_test = neural_net_test %>% 
