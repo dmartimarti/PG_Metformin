@@ -28,7 +28,7 @@ enrich = function(syn.items=syn, ant.items=ant, db=biolog, feature='Target'){
   
   
   classes = drug_target %>% select(feature) %>% t %>% as.vector %>% unique
-  N = length(unique(drug_class$Metabolite))
+  N = length(unique(drug_target$Metabolite))
   
   # hypergeometric test
   # synergy
