@@ -381,19 +381,21 @@ dev.copy2pdf(device = cairo_pdf,
 
 # boxplots ----------------------------------------------------------------
 
+drug = 'Spectinomycin'
+
 # tests
 data %>%
   mutate(DrugConc = str_sub(MetaboliteU, -1),
          Plate = str_sub(Index, 1,4),
          Replicate = as.factor(Replicate)) %>%
-  filter(Metabolite == 'Tetrazolium violet') %>% 
+  filter(Metabolite == drug) %>% 
   mutate(Type = factor(Type, levels = c('Control', 'Treatment'))) %>% 
   ggplot(aes(x = DrugConc, y = AUC, fill = Type)) + 
   geom_boxplot() +
   geom_point(position = position_jitterdodge()) 
 
 data.sum %>%
-  filter(Metabolite == 'Tetrazolium violet') %>% 
+  filter(Metabolite == drug) %>% 
   mutate(Type = factor(Type, levels = c('Control', 'Treatment'))) %>% 
   ggplot(aes(x = MetaboliteU, y = Mean, color = Type, fill = Type, group = Type)) + 
   geom_errorbar(aes(ymin=Mean-SD, ymax=Mean+SD), width=.1) +
@@ -586,6 +588,111 @@ df %>%
 dev.copy2pdf(device = cairo_pdf,
              file = here('summary', 'Drug_enrichment_relaxed.pdf'),
              width = 8, height = 7, useDingbats = FALSE)
+
+
+
+
+
+
+# Growth curves (sig metab) -----------------------------------------------
+
+
+
+
+
+
+
+
+# Get timeseries data
+# It will take a while
+data.t = read_csv('Timeseries.csv',quote = "\"") %>%
+  filter(Data == '750nm_f') %>% 
+  gather(Time_s, OD, matches('\\d')) %>%
+  filter(!is.na(OD)) %>% 
+  mutate(Type = ifelse(Type == 'Control','C','T'),
+         Type = factor(Type,
+                       levels = c('C','T'),
+                       labels = c('Control','Treatment')),
+         Time_s = as.numeric(Time_s),
+         Time_h = Time_s/3600,
+         Row = str_match_all(Well,'[:digit:]{1,}'),
+         Col = str_match_all(Well,'[:alpha:]{1,}'), 
+         Row = factor(Row, levels = 1:12), 
+         Col = factor(Col, levels = LETTERS[1:8])) %>% 
+  select(-c(File,Reader, Comment))
+
+# Growth curves for summary
+
+tsum = data.t %>%
+  group_by(Strain, Type, Index, Plate, Well, Metabolite, MetaboliteU, Time_h) %>%
+  summarise(Mean = mean(OD), SD = sd(OD),SE = SD/sqrt(length(OD))) %>%
+  ungroup 
+
+
+# test to plot a single metabolite
+tsum %>%
+  filter(Metabolite == 'Potassium chromate') %>% 
+  ggplot( aes(x = Time_h, y = Mean, fill = Type, color = Type)) +
+  geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.2) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, 24, by = 12)) +
+  ylab("OD") +
+  xlab("Time, h") +
+  labs(fill = "Type") +
+  facet_grid((~MetaboliteU*Metabolite)) 
+
+
+# let's select only the significant metabolites
+sig_metabs = stats_sum %>%
+  filter(p.value < 0.05) %>% 
+  select(Metabolite) %>% t %>% as.character
+
+
+# This is a very busy and useless plot
+
+# # plot all sig metabs growth curves
+# tsum %>%
+#   filter(Metabolite %in% sig_metabs) %>% 
+#   ggplot( aes(x = Time_h, y = Mean, fill = Type, color = Type)) +
+#   geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.2) +
+#   geom_line() +
+#   scale_x_continuous(breaks = seq(0, 24, by = 12)) +
+#   ylab("OD") +
+#   viridis::scale_fill_viridis(discrete=TRUE) +
+#   viridis::scale_color_viridis(discrete=TRUE) +
+#   xlab("Time, h") +
+#   labs(fill = "Type") +
+#   facet_wrap((~MetaboliteU), ncol = 4) 
+# 
+# 
+# dev.copy2pdf(device = cairo_pdf,
+#              file = here('summary', 'Growth_curves_sig_metab.pdf'),
+#              width = 10, height = 60, useDingbats = FALSE)
+
+
+# THIS LOOP PLOTS EACH METABOLITE IN A SEPARATE PLOT
+
+for ( met in sig_metabs){
+
+  # plot all sig metabs growth curves
+  tsum %>%
+    filter(Metabolite %in% met) %>% 
+    ggplot( aes(x = Time_h, y = Mean, fill = Type, color = Type)) +
+    geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.2) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(0, 24, by = 12)) +
+    ylab("OD") +
+    viridis::scale_fill_viridis(discrete=TRUE) +
+    viridis::scale_color_viridis(discrete=TRUE) +
+    xlab("Time, h") +
+    labs(fill = "Type") +
+    facet_wrap((~MetaboliteU), ncol = 4) 
+  
+  
+  ggsave(here('summary/growth_curves', paste0(met,'_growth_curves.pdf')),
+               width = 10, height = 8)
+}
+
 
 
 
