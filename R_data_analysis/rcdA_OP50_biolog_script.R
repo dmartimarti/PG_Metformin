@@ -693,6 +693,40 @@ for ( met in sig_metabs){
                width = 10, height = 8)
 }
 
+### MetaboliteU filter
+
+# let's select only the significant metabolites
+sig_metabs = stats %>%
+  filter(p.value < 0.05) %>% 
+  select(MetaboliteU) %>% 
+  mutate(MetaboliteU = str_sub(MetaboliteU,1,-3)) %>% 
+  distinct(MetaboliteU) %>% 
+  t %>% as.character
+
+
+# THIS LOOP PLOTS EACH METABOLITE IN A SEPARATE PLOT
+
+for ( met in sig_metabs){
+  
+  # plot all sig metabs growth curves
+  tsum %>%
+    filter(Metabolite %in% met) %>% 
+    ggplot( aes(x = Time_h, y = Mean, fill = Type, color = Type)) +
+    geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.2) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(0, 24, by = 12)) +
+    ylab("OD") +
+    viridis::scale_fill_viridis(discrete=TRUE) +
+    viridis::scale_color_viridis(discrete=TRUE) +
+    xlab("Time, h") +
+    labs(fill = "Type") +
+    facet_wrap((~MetaboliteU), ncol = 4) 
+  
+  
+  ggsave(here('summary/growth_curves_metabU', paste0(met,'_growth_curves.pdf')),
+         width = 10, height = 8)
+}
+
 
 
 
