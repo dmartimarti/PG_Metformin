@@ -230,36 +230,9 @@ eco_path = eco_path %>% select(gene = gene_names, pathway)
 eco_path.keio = eco_path %>% filter(gene %in% keio.rat$Strain)
 eco_path.aska = eco_path %>% filter(gene %in% aska.rat$Strain)
 
-# let's do an example of enrichment
 
-
-# # categories
-# cats = eco_path %>% distinct(pathway) %>% t  %>% as.character()
-# 
-# tca = eco_path %>% 
-#   filter(pathway == 'superpathway of glycolysis, pyruvate dehydrogenase, TCA, and glyoxylate bypass')
-#   
-# N = (eco_path %>% distinct(gene) %>% count())$n
-# m = dim(tca)[1]
-# n = N - m
-# 
-# x = sum((keio.out %>% filter(direction == 'bottom'))$Strain %in% tca$gene)
-# k = (keio.out %>% filter(direction == 'bottom') %>% count(direction))$n
-# 
-# 
-# phyper(q=x-1, m=m, n=n, k=k, lower.tail=FALSE)
-# 
-# pval = c()
-# for (cat in cats){
-#   tca = eco_path %>% filter(pathway == cat)
-#   N = (eco_path %>% distinct(gene) %>% count())$n
-#   m = dim(tca)[1]
-#   n = N - m
-#     x = sum((keio.out %>% filter(direction == 'bottom'))$Strain %in% tca$gene)
-#   k = (keio.out %>% filter(direction == 'bottom') %>% count(direction))$n
-#   p = phyper(q=x-1, m=m, n=n, k=k, lower.tail=FALSE)
-#   pval = c(pval, p)
-# }
+# save eco_path.aska as the main table for next analyses with enrichment
+write_csv(eco_path.aska, here('summary', 'EcoCyc_genes_pathways.csv'))
 
 
 
