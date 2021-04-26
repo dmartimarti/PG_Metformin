@@ -31,6 +31,12 @@ unicycler -l output.fastq -o ../Unicycler_assembly -t 6
 
 
 # this code collects all genomes from a batch folder 
+# remember to change P (plate) and batch (1 to 8)
+# P1: batch1 and batch2
+# P2: batch3 and batch4
+# P3: batch5 and batch6
+# P4: batch7 and batch8
+
 cd /rds/general/user/dmarti14/home/Pangenomic_genomes/sequencing/raw/210401_NB501045_0331_AHYK7HBGXH/Unaligned/trimm_seqs/P1/batch1/unicycler_batch
 mkdir assemblies
 for folder in P1*
@@ -43,10 +49,20 @@ done
 # scp to copy fasta files into my folder
 # my machine
 cd /mnt/d/MRC_Postdoc/Pangenomic/sequencing/Big_sequencing/unicycler_assemblies/P1
-scp -r dmarti14@login.hpc.imperial.ac.uk:/rds/general/user/dmarti14/home/Pangenomic_genomes/sequencing/raw/210401_NB501045_0331_AHYK7HBGXH/Unaligned/trimm_seqs/P2/batch4/unicycler_batch/assemblies/*fasta ./
+scp -r dmarti14@login.hpc.imperial.ac.uk:/rds/general/user/dmarti14/home/Pangenomic_genomes/sequencing/raw/210401_NB501045_0331_AHYK7HBGXH/Unaligned/trimm_seqs/P4/batch8/unicycler_batch/assemblies/*fasta ./
 
+
+cd /mnt/d/MRC_Postdoc/Pangenomic/sequencing/Big_sequencing/unicycler_assemblies/unicycler_files
+scp -r dmarti14@login.hpc.imperial.ac.uk:/rds/general/user/dmarti14/home/Pangenomic_genomes/sequencing/raw/210401_NB501045_0331_AHYK7HBGXH/Unaligned/trimm_seqs/P*/batch*/unicycler_batch/P* ./
 
 # quast
-
+conda activate assembly
 quast *fasta -t 10 -o quast_quality
 
+
+
+
+for folder in *
+do
+	cp ./$folder/*.fasta ./all_assemblies/
+done
