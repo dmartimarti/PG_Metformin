@@ -714,3 +714,44 @@ y_data = neural_net_test$FC_worm %>% write.table(here('NN','y_data_COG_worm.csv'
 x_data = neural_net_test %>% select(-FC_worm) %>% write_csv(here('NN','x_data_COG_worm.csv'))
 
 
+
+
+
+
+
+
+
+# prgHKIG operon ----------------------------------------------------------
+
+
+gene_presence_absence_alt
+
+gene_presence_absence %>% 
+  filter(str_detect(Gene, 'prgK|prgG|prgH|prgI')) %>% 
+  summarise(across(NT12001_189:NT12705_21, sum)) %>% 
+  pivot_longer(NT12001_189:NT12705_21,names_to = 'Genome', values_to = 'Gene_count')  %>% 
+  ggplot(aes(x = Gene_count)) +
+  geom_histogram()
+
+ggsave(here('R_plots', 'prg_genes_histogram.pdf'))
+
+
+
+# count for the genomes that have the 3 genes separated by broadphenotype
+
+gene_presence_absence %>% 
+  filter(str_detect(Gene, 'prgK|prgG|prgH|prgI')) %>% 
+  summarise(across(NT12001_189:NT12705_21, sum))%>% 
+  pivot_longer(NT12001_189:NT12705_21,names_to = 'Genome', values_to = 'Gene_count') %>% 
+  mutate(Genome = str_sub(Genome, 1, 7)) %>% 
+  left_join(strain_db %>% select(Genome = ID, Broadphenotype)) %>% 
+  # filter(Gene_count == 3) %>% 
+  mutate(Gene_count = as.factor(Gene_count)) %>% 
+  group_by(Gene_count) %>% 
+  count(Broadphenotype) %>% 
+  ggplot(aes(y = n, x = Gene_count, fill = Broadphenotype)) + 
+  geom_histogram(stat = 'identity')
+
+ggsave(here('R_plots', 'prg_genes_byphenotype_histogram.pdf'))
+
+
