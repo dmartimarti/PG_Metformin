@@ -83,7 +83,11 @@ data %>%
 
 # the library is no longer active, so this is how you can install it
 require(devtools)
-install_version("OutlierDetection", version = "0.1.1", repos = "http://cran.us.r-project.org")
+# install_version("OutlierDetection", version = "0.1.1", 
+#                 repos = "http://cran.us.r-project.org")
+# 
+# install.packages('https://cran.r-project.org/src/contrib/Archive/OutlierDetection/OutlierDetection_0.1.1.tar.gz',
+#                  repos=NULL)
 
 library(OutlierDetection)
 
