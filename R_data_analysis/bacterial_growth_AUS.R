@@ -272,30 +272,27 @@ list_of_datasets = list('unweighted' = data.sum %>% filter(Measure == 'uncsum'),
 write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats_AUS.xlsx', colNames = T, rowNames = T) 
 
 
-
-# comparison --------------------------------------------------------------
-
-# this chunk of code is meant to compare the first version of
-# score calculation with the second, where I just calculated first 
-# the average of each measure at a certain concentration and then
-# I calculated the score
-
-merge = data.sum %>% 
-  filter(Measure == 'uncsum') %>% 
-  distinct(Strain, .keep_all = T) %>% 
-  left_join(nodups) %>% 
-  drop_na(Mean, Bact_score_mean) 
-
-merge %>% 
-  filter(Bact_score_mean < 5) %>%
-  ggplot(aes(x = Mean, y = Bact_score_mean)) +
-  geom_smooth(method = 'lm')+
+data.sum %>% 
+  # filter(Measure == 'uncsum') %>% 
+  filter(phylogroup != 'Non Escherichia') %>% 
+  mutate(Measure = case_when(Measure == 'uncsum' ~ 'Unweighted',
+                             TRUE ~ 'Weighted')) %>%
+  ggplot(aes(y = Bact_score_mean, x = fct_reorder(Strain, Bact_score_mean), color = Bact_score_mean)) +
   geom_point() +
-  theme_light() +
-  labs(x = 'Method 2',
-       y = 'Method 1')
+  facet_wrap(~Measure, nrow=2, scales = 'free_y')
+  
+ggsave(here('summary', 'growth_score.pdf'), height = 8, width = 10)
 
-
+data.sum %>% 
+  # filter(Measure == 'uncsum') %>% 
+  filter(phylogroup != 'Non Escherichia') %>% 
+  mutate(Measure = case_when(Measure == 'uncsum' ~ 'Unweighted',
+                             TRUE ~ 'Weighted')) %>% 
+  select(Strain, Measure, Bact_score_mean) %>% 
+  pivot_wider(names_from = 'Measure', values_from = Bact_score_mean) %>% 
+  ggplot(aes(x = Unweighted, y = Weighted)) +
+  geom_smooth() +
+  geom_point()
 
 # Growth curves (inherited from Jen) --------------------------------------
 
