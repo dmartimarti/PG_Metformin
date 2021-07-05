@@ -39,7 +39,7 @@ unicycler -l output.fastq -o ../Unicycler_assembly -t 6
 
 cd /rds/general/user/dmarti14/home/Pangenomic_genomes/sequencing/raw/210401_NB501045_0331_AHYK7HBGXH/Unaligned/trimm_seqs/P1/batch1/unicycler_batch
 mkdir assemblies
-for folder in P1*
+for folder in P5*
 do
 	cp ./$folder/assembly.fasta ./assemblies/$folder.fasta
 done
