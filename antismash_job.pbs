@@ -1,0 +1,28 @@
+#PBS -l walltime=72:0:0
+#PBS -l select=1:ncpus=32:mem=124gb
+
+# Load modules for any applications
+
+module load anaconda3/personal
+source activate antismash
+
+WORK=$HOME/pangenome_study/complete/annotations/no_evo/gbk
+
+mkdir $WORK/antiSMASH.6
+
+for gbk in $WORK/*.gbk
+do
+   OUTLONG=${gbk##*/}
+   OUTPUT=${OUTLONG::-4}
+   
+   cp $gbk $TMPDIR
+   
+   antismash $gbk --genefinding-tool none --cb-knownclusters \
+   --cb-general --cb-subclusters --asf --pfam2go --smcog-trees \
+    --cc-mibig --fullhmmer  --rre --cc-mibig \
+   -c 32 -v --output-dir $OUTPUT
+   
+   cp -r $OUTPUT $WORK/antiSMASH.6/
+
+done
+
