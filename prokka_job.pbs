@@ -1,0 +1,26 @@
+#PBS -l walltime=72:0:0
+#PBS -l select=1:ncpus=32:mem=22gb
+
+# Load modules for any applications
+
+module load anaconda3/personal
+source activate prokka
+
+WORK=$HOME/pangenome_study/complete/assemblies/no_evo
+mkdir $WORK/annot_prokka_no_Evo
+REF=$HOME/pangenome_study/complete/reference_annotation
+
+for fasta in $WORK/*.fasta
+do
+        OUTLONG=${fasta##*/}
+    OUTPUT=${OUTLONG::-6}
+
+    cp $fasta $TMPDIR
+
+    prokka --outdir $OUTPUT --prefix $OUTPUT $fasta \
+    --genus Escherichia --species coli \
+    --cpus 32 --proteins $REF/E_coli_MG1655_complete.gb --usegenus
+
+   cp -r $OUTPUT $WORK/annot_prokka_no_Evo/
+
+done
