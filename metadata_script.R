@@ -186,7 +186,8 @@ write.xlsx(list_of_datasets, 'MAIN_metadata.xlsx')
 
 
 
-
+full_metadata %>% 
+  filter(!is.na(Notes))
 
 
 
