@@ -6,7 +6,7 @@
 module load anaconda3/personal
 source activate iqtree
 
-WORK=$HOME/pangenome_study/annotations/good_quality/panaroo_results_1st_2nd_batch
+WORK=$HOME/pangenome_study/complete/annotations/no_evo/panaroo_results_noEVO
 
 mkdir $WORK/phy_fast_tree
 
