@@ -47,6 +47,10 @@ data = data %>%
 straindb = read_xlsx('strain_db.xlsx', sheet = 'strain_db')
 exp_str = straindb %>% filter(Broadphenotype == 'Evolutionexperiment') %>% select(ID) %>% t %>% as.vector
 
+metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
+                      sheet = "metadata")
+
+
 # filter out the evo strains
 data = data %>% filter(!(Strain %in% exp_str))
 
@@ -347,11 +351,22 @@ data.sum = data.sum %>%
          Bact_score_sd = SD) %>% 
   select(Strain, ID, Plate, Well, Measure, everything(), -ID)
 
+data.sum = data.sum %>% left_join(metadata %>% filter(Origin == 'ECOREF') %>% 
+                                    select(Strain = ID, phylogroup))
+
+# fill empty fields with non ecoli labels
+data.sum = data.sum %>% 
+  mutate(phylogroup = case_when(is.na(phylogroup) ~ 'Non Escherichia',
+                                TRUE ~ phylogroup)) 
+
+
+
 # save info
 list_of_datasets = list('unweighted' = data.sum %>% filter(Measure == 'uncsum'), 
                         'weighted' = data.sum %>% filter(Measure == 'wcsum'))
 
-write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats.xlsx', colNames = T, rowNames = T) 
+
+write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats_ECOREF.xlsx', colNames = T, rowNames = T) 
 
 
 # Summary no dups ---------------------------------------------------------
@@ -395,10 +410,25 @@ nodups = nodups %>% left_join(sum.stats %>%
                                 distinct(Strain, .keep_all = T)) %>% 
   ungroup
 
+# check that it's really without any duplicates
+nodups %>% distinct(Strain)
+
+
+nodups = nodups %>% left_join(metadata %>% filter(Origin == 'ECOREF') %>% 
+                                    select(Strain = ID, phylogroup) %>% distinct(Strain, .keep_all = TRUE))
+
+# fill empty fields with non ecoli labels
+nodups = nodups %>% 
+  mutate(phylogroup = case_when(is.na(phylogroup) ~ 'Non Escherichia',
+                                TRUE ~ phylogroup)) 
+
+
+
+
 # save info
 list_of_datasets = list('unweighted' = nodups )
 
-write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats_NODUPS.xlsx', colNames = T, rowNames = T) 
+write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats_NODUPS_ECOREF.xlsx', colNames = T, rowNames = T) 
 
 
 
