@@ -1,4 +1,3 @@
-
 # libraries ---------------------------------------------------------------
 library(tidyverse)
 library(readxl)
@@ -52,7 +51,12 @@ exp_str = straindb %>% filter(Broadphenotype == 'Evolutionexperiment') %>% selec
 data = data %>% filter(!(Strain %in% exp_str))
 
 
+# Keep only plates 1 to 6, as these are the ones that we use
+data = data %>% filter(Plate %in% seq(1,6,1))
 
+
+# write a clean version of the data table
+write.csv(data, 'summary_clean.csv')
 
 ### duplicates ####
 
@@ -79,141 +83,151 @@ data %>%
 
 
 
+write.csv()
+
+
 # outlier detection -------------------------------------------------------
-
-# the library is no longer active, so this is how you can install it
-require(devtools)
-# install_version("OutlierDetection", version = "0.1.1", 
-#                 repos = "http://cran.us.r-project.org")
 # 
-# install.packages('https://cran.r-project.org/src/contrib/Archive/OutlierDetection/OutlierDetection_0.1.1.tar.gz',
-#                  repos=NULL)
-
-library(OutlierDetection)
-
-# filter out the IDs (unique strains) that have a growth less than 0.05 at metf == 0
-bad = data %>% 
-  filter(AUC_raw < 0.05, Metformin_mM == 0) %>% 
-  filter(!(Strain == 'NT12335')) %>% 
-  arrange(ID) %>% distinct(ID) %>% t %>% as.character()
+# the process of outlier detection has these steps:
+#   1. use DBSCAN with a wide table (select optimal eps with kNNdistplot)
+#   2. check and get outliers from analysis for further processing and outlier refining
+#   3. calculate z-score and coefficient of variation (CV)
+#   4. use the samples that deviate greatly from a threshold (0.8)
+#   5. to select the replicate that is the outlier, calculate pairwise differences between their z-scores
+#   6. get the differences that are larger than 1.3 (see plot to check and select threshold)
+#   7. select only those samples that had only 1 bad replicate 
+#   8. remove bad replicates and clean the dataset
 
 # clean up of data
 data.wide = data %>% 
-  # DATA IMPUTATION by minimum non-zero value
-  # mutate(AUC_raw = case_when(AUC_raw == 0 ~ 0.0001,
-  #                            AUC_raw != 0 ~ AUC_raw)) %>% 
-  # filter(!(ID %in% bad)) %>% 
   select(ID, Metformin_mM, Replicate, AUC_raw) %>% 
   pivot_wider(names_from = Replicate, values_from = AUC_raw, names_prefix = 'rep_')
 
-# met0_filt = data %>% filter(Metformin_mM == 0) %>%
-#   select(ID, Replicate, AUC_raw) %>%
-#   pivot_wider(names_from = Replicate, values_from = AUC_raw, names_prefix = 'rep_') 
 
-# get the list of weird strains
-# weird_st = met0_filt %>% filter(rep_1 <= thr | rep_2 <= thr | rep_3 <= thr) %>%
-#   select(ID) %>% as.vector %>% t %>% as.character
+library(plotly)
 
-# remove names
-# met0_filt = met0_filt %>% filter(!ID %in% weird_st)
-X = data.wide[,3:5]
 
-# master method
-outs = OutlierDetection(X, k = 5, cutoff = 0.98, Method = "euclidean", 
-                        rnames = data.wide[,1], dispersion = TRUE)
+plot_ly(x=data.wide$rep_1, y=data.wide$rep_2, z=data.wide$rep_3, 
+        type="scatter3d", mode="markers",
+        color = as.factor(data.wide$Metformin_mM))
 
-outs
+#   1. use DBSCAN with a wide table (select optimal eps with kNNdistplot)
 
-# how many outlier strains have duplicates
-outliers = data.wide[outs$`Location of Outlier`,] %>% 
-  mutate(ID = str_sub(ID, 1,7)) %>% 
-  distinct(ID) %>% 
-  t %>% as.character()
+library(fpc)
+library(dbscan)
 
-# 64 strains with duplicates
-sum(outliers %in% dups)
+# calculate the optimal eps for db
+dbscan::kNNdistplot(data.wide[,3:5], k =  5)
+abline(h = 2, lty = 2)
 
-# filter duplicated strains in the outlier group
+db = fpc::dbscan(data.wide[,3:5], eps = 2, MinPts = 5,
+            method = 'hybrid')
+
+db
+
+#   2. check and get outliers from analysis for further processing and outlier refining
+# plot outliers
+plot_ly(x=data.wide$rep_1, y=data.wide$rep_2, z=data.wide$rep_3, 
+        type="scatter3d", mode="markers",
+        color = as.factor(db$cluster))
+
+
+outliers = db$cluster
+
+out_IDs = data.wide %>% cbind(outliers) %>% 
+  as_tibble %>% 
+  filter(outliers == 0) %>% 
+  separate(ID, into = c('ID', 'Plate', 'Well'), sep = '_') %>% 
+  pull(ID)
+
+
 out_dup = data %>% 
-  filter(Strain %in% outliers[outliers %in% dups]) %>% 
+  filter(Strain %in% out_IDs) %>% 
   group_by(Strain, Metformin_mM) %>% 
   mutate(zscore = (AUC_raw-mean(AUC_raw))/sd(AUC_raw)) %>% 
   ungroup 
 
-# use the outliers function from spatialEco to calculate 
-# the modified z-score, that is better suited to find 
-# outliers 
 
-# initialise thresholds
-thr1 = 9
-thr2 = 9
-thr3 = 7
-thr4 = 3
+#   3. calculate z-score and coefficient of variation (CV)
+# refine selection by calculating the coefficient of variation
+cv = out_dup %>% 
+  group_by(Strain, Metformin_mM, ID) %>% 
+  # mutate(AUC_raw = log2(AUC_raw)) %>% 
+  summarise(Mean = mean(AUC_raw),
+            SD = sd(AUC_raw)) %>% 
+  mutate(CV = SD / Mean)
 
+#   4. use the samples that deviate greatly from a threshold (0.8)
+# mark a global threshold of 0.8
+cv %>% 
+  ggplot(aes(x = fct_reorder(ID, CV), y = CV)) +
+  geom_point() +
+  geom_hline(yintercept=0.8) +
+  facet_wrap(~Metformin_mM) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+
+ggsave(here('summary', 'outliers_coef_variation.pdf'), height = 9, width = 10)
+
+# check data to be sure the threshold is ok
+out_dup %>% left_join(cv) %>% view
+
+# get true outliers
+true_outs = cv %>% ungroup %>%  filter(CV > 0.8) %>% 
+  select(Strain, Metformin_mM, ID) %>% 
+  unite(new_ID, ID, Metformin_mM, remove=F) %>% pull(new_ID)
+
+# filter the previous table
 out_dup = out_dup %>% 
-  group_by(Strain, Metformin_mM) %>% 
-  mutate(out = spatialEco::outliers(AUC_raw)) %>% 
-  ungroup %>% 
-  mutate(pass = case_when(Metformin_mM == 0 & abs(out) > thr1 ~ 'OUT',
-                          Metformin_mM == 0 & abs(out) <= thr1 ~ 'pass',
-                          Metformin_mM == 50 & abs(out) > thr2 ~ 'OUT',
-                          Metformin_mM == 50 & abs(out) <= thr2 ~ 'pass',
-                          Metformin_mM == 100 & abs(out) > thr3 ~ 'OUT',
-                          Metformin_mM == 100 & abs(out) <= thr3 ~ 'pass',
-                          Metformin_mM == 200 & abs(out) > thr4 ~ 'OUT',
-                          Metformin_mM == 200 & abs(out) <= thr4 ~ 'pass')) %>% 
-  arrange(Strain, Metformin_mM)
+  unite(new_ID, ID, Metformin_mM, remove=F) %>% 
+  filter(new_ID %in% true_outs) %>% 
+  select(-new_ID) %>% 
+  left_join(cv)
 
-# how many replicates we have per condition?
-# at least 4, so far so good, we can remove the outliers detected previously
+#   5. to select the replicate that is the outlier, calculate pairwise differences between their z-scores
+out_calc = out_dup %>% 
+  select(ID, Strain, Metformin_mM, Replicate, zscore) %>% 
+  pivot_wider(names_from = c('Replicate'), names_prefix = 'rep_', values_from = zscore) %>% 
+  mutate(dif_1_2 = abs(rep_1 - rep_2),
+         dif_2_3 = abs(rep_2 - rep_3),
+         dif_1_3 = abs(rep_1 - rep_3)) %>% 
+  select(ID, Strain, Metformin_mM, dif_1_2:dif_1_3) %>% 
+  pivot_longer(dif_1_2:dif_1_3, names_to = 'Groups', values_to = 'difference') %>% 
+  mutate(Replicate = case_when(Groups == 'dif_1_2' ~ 3,
+                              Groups == 'dif_2_3' ~ 1,
+                              Groups == 'dif_1_3' ~ 2)) 
+#   6. get the differences that are larger than 1.3 (see plot to check and select threshold)
+out_calc %>% 
+  ggplot(aes(x = fct_reorder(ID, difference), y = difference)) +
+  geom_point() + facet_wrap(~Metformin_mM) +
+  geom_hline(yintercept = 1.2)
 
-out_dup %>% 
-  filter(pass != 'OUT') %>% 
-  group_by(Strain, Metformin_mM) %>% 
-  count() %>% arrange(n)
+#   7. select only those samples that had only 1 bad replicate 
+IDs_bad = out_calc %>% filter(difference < 1.2) %>% 
+  count(ID,Metformin_mM) %>% arrange(desc(n)) %>% 
+  filter(n == 1) %>%  ## keep only the ones that are 
+  pull(ID)
 
-
-### do the same, but with non-duplicates
-out_single = data %>% 
-  filter(Strain %in% outliers[!(outliers %in% dups)]) %>% 
-  group_by(Strain, Metformin_mM) %>% 
-  mutate(zscore = (AUC_raw-mean(AUC_raw))/sd(AUC_raw)) %>% 
-  ungroup
-
-
-out_single = out_single %>% 
-  group_by(Strain, Metformin_mM) %>% 
-  mutate(out = spatialEco::outliers(AUC_raw)) %>% 
-  ungroup %>% 
-  mutate(pass = case_when(Metformin_mM == 0 & abs(out) > thr1 ~ 'OUT',
-                          Metformin_mM == 0 & abs(out) <= thr1 ~ 'pass',
-                          Metformin_mM == 50 & abs(out) > thr2 ~ 'OUT',
-                          Metformin_mM == 50 & abs(out) <= thr2 ~ 'pass',
-                          Metformin_mM == 100 & abs(out) > thr3 ~ 'OUT',
-                          Metformin_mM == 100 & abs(out) <= thr3 ~ 'pass',
-                          Metformin_mM == 200 & abs(out) > thr4 ~ 'OUT',
-                          Metformin_mM == 200 & abs(out) <= thr4 ~ 'pass')) %>% 
-  arrange(Strain, Metformin_mM)
-
-# at least two samples in each condition, not bad
-out_single %>% 
-  filter(pass != 'OUT') %>% 
-  group_by(Strain, Metformin_mM) %>% 
-  count() %>% arrange(n)
-
-
-
-out_final = out_dup %>% filter(pass == 'OUT') %>% 
-  bind_rows(out_single %>% filter(pass == 'OUT')) %>% 
-  select(-zscore:-pass)
+#   8. remove bad replicates and clean the dataset
+### THIS IS THE IMPORTANT LIST
+# this list has the IDs of the bad replicates that we need to remove from the analysis
+outliers_final = out_calc %>% filter(difference < 1.2) %>% 
+  filter(ID %in% IDs_bad) %>% 
+  select(ID, Strain, Metformin_mM, Replicate)
 
 
 # CLEAN THE DATA FROM THE OUTLIERS FOUND
-data.clean = data %>% anti_join(out_final)
+data.clean = data %>% anti_join(outliers_final)
 
+## BONUS: check that the distribution is better
+# clean up of data
+data.wide.clean = data.clean %>% 
+  select(ID, Metformin_mM, Replicate, AUC_raw) %>% 
+  pivot_wider(names_from = Replicate, values_from = AUC_raw, names_prefix = 'rep_')
 
-# remove PG7 and PG8
-data.clean = data.clean %>% filter(Plate %in% c(1,2,3,4,5,6))
+# check that it looks better than before
+plot_ly(x=data.wide.clean$rep_1, y=data.wide.clean$rep_2, z=data.wide.clean$rep_3, 
+        type="scatter3d", mode="markers",
+        color = as.factor(data.wide.clean$Metformin_mM))
 
 
 
@@ -233,8 +247,6 @@ for (plate in plates){
   ggsave(file = here('summary', paste0('plate_',as.character(plate),'_boxplot.pdf')),
          width = 13, height = 8)
 }
-
-data.clean %>% filter(Plate == 2) %>% view()
 
 
 
@@ -297,7 +309,6 @@ sum.stats = data.clean %>%
   pivot_wider(names_from = Metformin_mM, names_prefix = 'Bact_metf_', values_from = c(Mean, SD))
 
 
-
 # overlap test ------------------------------------------------------------
 
 ## This chunk of code is meant to test how many strains are the same whether 
@@ -341,12 +352,6 @@ list_of_datasets = list('unweighted' = data.sum %>% filter(Measure == 'uncsum'),
                         'weighted' = data.sum %>% filter(Measure == 'wcsum'))
 
 write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats.xlsx', colNames = T, rowNames = T) 
-
-
-
-
-
-
 
 
 # Summary no dups ---------------------------------------------------------
@@ -399,7 +404,6 @@ write.xlsx(list_of_datasets, 'Growth_resistance_summaryStats_NODUPS.xlsx', colNa
 
 
 
-
 # comparison --------------------------------------------------------------
 
 # this chunk of code is meant to compare the first version of
@@ -421,6 +425,7 @@ merge %>%
   theme_light() +
   labs(x = 'Method 2',
        y = 'Method 1')
+
 
 # it seems that it has way less outliers than the first version, 
 
@@ -531,4 +536,7 @@ rates.sum = rates.sum %>%
 list_of_datasets = list('unweighted' = rates.sum )
 
 write.xlsx(list_of_datasets, 'Growth_rates_NODUPS.xlsx', colNames = T, rowNames = T) 
+
+
+
 
