@@ -49,48 +49,46 @@ data_filt_full = worm_data %>%
 
 
 ## metadata
-strain_db = read_excel("raw_data/strain_db.xlsx")
-Natural_isolates_layout = read_excel("raw_data/Natural isolates layout.xlsx", 
-                                     sheet = "list_long") %>% 
-  filter(PG %in%  c('PG1','PG2','PG3','PG4','PG5','PG6'))
 
-biofilm_strain_annotation = read_excel("20909_biofilm_strain_annotation.xlsx", sheet = 'rep4') %>% rename(ID = Strain) %>% 
-  select(-`...7`,-`...8`,-`...9`) %>% 
-  rename(biofilm_0mM = `0mM_annotation`,
-         biofilm_50mM = `50mM_annotation`)
+MAIN_metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx")
 
+metadata = MAIN_metadata %>% filter(Origin == 'ECOREF') %>% 
+  select(-Assembly, -Annotation, -Plate)
 
-# merge and filter Ev experiments
-metadata = strain_db %>%
-  left_join(Natural_isolates_layout) %>% 
-  filter(!(is.na(PG) == TRUE)) %>% 
-  left_join(biofilm_strain_annotation)
+# strain_db = read_excel("raw_data/strain_db.xlsx")
+# Natural_isolates_layout = read_excel("raw_data/Natural isolates layout.xlsx", 
+#                                      sheet = "list_long") %>% 
+#   filter(PG %in%  c('PG1','PG2','PG3','PG4','PG5','PG6'))
+# 
+# biofilm_strain_annotation = read_excel("20909_biofilm_strain_annotation.xlsx", sheet = 'rep4') %>% rename(ID = Strain) %>% 
+#   select(-`...7`,-`...8`,-`...9`) %>% 
+#   rename(biofilm_0mM = `0mM_annotation`,
+#          biofilm_50mM = `50mM_annotation`)
+# 
+# 
+# # merge and filter Ev experiments
+# metadata = strain_db %>%
+#   left_join(Natural_isolates_layout) %>% 
+#   filter(!(is.na(PG) == TRUE)) %>% 
+#   left_join(biofilm_strain_annotation)
 
 
 # join everything to have names, IDs and all that stuff in one table
-data_filt = data_filt %>%
+data_filt = data_filt_full %>%
   left_join(metadata) %>%
-  select(PG, Well, Metf, ID, Strainname, B_phenotype, biofilm_0mM, biofilm_50mM, Broadphenotype, everything())
+  select(PG, Well, Metf, ID, Strainname, Annotation_0mM, Annotation_50mM, Broadphenotype, -`...1` ,everything()) %>% 
+  filter(!(PG %in% c('PG7', 'PG8')))
 
 
-list_of_datasets = list('MAIN_metadata' = metadata)
-write.xlsx(list_of_datasets, here('exploration', 'MAIN_metadata.xlsx'), colNames = T, rowNames = F) 
+# list_of_datasets = list('MAIN_metadata' = metadata)
+# write.xlsx(list_of_datasets, here('exploration', 'MAIN_metadata.xlsx'), colNames = T, rowNames = F) 
 
 # test
 data_filt %>%
   filter(Strainname == 'OP50')
 
-
-
-### As we have done a 4th replicate, let's save the original filtered list in a new variable that won't be changed
-# and I'll filter plates 7 and 8 from everything as they were not included into the 4th replicates (all duplicates)
-
-data_filt_full = data_filt
-
-data_filt = data_filt %>% 
-  filter(!(PG %in% c('PG7', 'PG8')))
-
-
+data_filt %>% 
+  distinct(Replicate)
 
 
 # # # # # # # # # # # # # #  
@@ -118,15 +116,6 @@ isnt_out_tukey <- function(x, k = 1.5, na.rm = TRUE) {
   (quar[1] - k * iqr <= x) & (x <= quar[2] + k * iqr)
 }
 
-# Mahalanobis detection (MULTIVARIATE)
-maha_dist <- . %>% select_if(is.numeric) %>%
-  mahalanobis(center = colMeans(.), cov = cov(.))
-
-isnt_out_maha <- function(tbl, isnt_out_f, ...) {
-  tbl %>% maha_dist() %>% isnt_out_f(...)
-}
-
-
 isnt_out_funs <- funs(
   z = isnt_out_z,
   mad = isnt_out_mad,
@@ -135,7 +124,7 @@ isnt_out_funs <- funs(
 
 # calculate outliers by 3 different methods
 data_filt_outs = data_filt %>% 
-  group_by(PG,Well,Metf,ID,Strainname,B_phenotype,biofilm_0mM,biofilm_50mM,Broadphenotype) %>% 
+  group_by(PG,Well,Metf,ID,Strainname,Annotation_0mM, Annotation_50mM,Broadphenotype) %>% 
   mutate(z_out = isnt_out_z(Mean_Intensity),
          mad_out = isnt_out_mad(Mean_Intensity),
          tukey_out = isnt_out_tukey(Mean_Intensity)) %>% 
@@ -158,7 +147,8 @@ write.csv(data_filt_mad, here('exploration', 'raw_data_filtered.csv'), quote = F
 
 # save statistics list
 list_of_datasets = list('data_filtered' = data_filt_mad)
-write.xlsx(list_of_datasets, here('exploration', 'raw_data_filtered.xlsx'), colNames = T, rowNames = F) 
+write.xlsx(list_of_datasets, here('exploration', 'raw_data_filtered.xlsx'), 
+           colNames = T, rowNames = F, overwrite = TRUE) 
 
 
 
@@ -267,8 +257,8 @@ IDs = c('NT12085')
 # plot Mean intensity by itself (it looks good!)
 data_filt_mad %>% 
   # filter(Probability_of_SingleWorm > 0.7) %>%
-  # filter(Strainname %in% strains) %>%
-  filter(ID %in% IDs) %>% 
+  filter(Strainname %in% strains) %>%
+  # filter(ID %in% IDs) %>% 
   mutate(Strainname = factor(Strainname, levels = strains)) %>%
   ggplot(aes(y = Mean_Intensity - Mean_Intensity_in_neighborhood , x = Strainname, fill = Metf)) +
   geom_boxplot(outlier.colour = 'red') +
@@ -287,7 +277,7 @@ data_filt_mad %>%
 strains = metadata %>%
   select(ID) %>%
   drop_na(ID) %>%
-  t %>% as.character %>% unique
+  pull(ID)
 
 plot_list = list()
 for (i in 1:length(strains)){
@@ -297,7 +287,8 @@ for (i in 1:length(strains)){
     # filter(Probability_of_SingleWorm > 0.85) %>%
     ggplot(aes(y = Mean_Intensity, x = ID, fill = Metf, group = Metf)) +
     geom_boxplot(outlier.colour = 'pink') +
-    geom_point(aes(color = Replicate, size = Size_in_pixels), position = position_jitterdodge(jitter.width = 0.3)) +
+    geom_point(aes(color = Replicate, size = Size_in_pixels), 
+               position = position_jitterdodge(jitter.width = 0.3)) +
     # facet_wrap(~PG) +
     scale_fill_manual(values = c('#F5B607', '#0B97D4')) +
     theme_light() +
@@ -307,7 +298,8 @@ for (i in 1:length(strains)){
 }
 
 # save multiple plots into one big file
-ggsave(file = here('analysis', 'Mean_Intensity_ALL_STRAINS.pdf'), marrangeGrob(grobs = plot_list, nrow = 1, ncol = 1),
+ggsave(file = here('analysis', 'Mean_Intensity_ALL_STRAINS.pdf'), 
+       marrangeGrob(grobs = plot_list, nrow = 1, ncol = 1),
        width = 11, height = 7)
 
 
@@ -323,9 +315,11 @@ for (i in 1:length(strains)){
     left_join(norm) %>%
     mutate(median_intensity = Mean_Intensity - Median,
            mean_intensity = Mean_Intensity - Mean) %>%
-    ggplot(aes(y = Mean_Intensity - Mean_Intensity_in_neighborhood, x = ID, fill = Metf, group = Metf)) +
+    ggplot(aes(y = Mean_Intensity - Mean_Intensity_in_neighborhood, 
+               x = ID, fill = Metf, group = Metf)) +
     geom_boxplot(outlier.colour = 'pink') +
-    geom_point(aes(color = Replicate, size = Size_in_pixels), position = position_jitterdodge(jitter.width = 0.3)) +
+    geom_point(aes(color = Replicate, size = Size_in_pixels), 
+               position = position_jitterdodge(jitter.width = 0.3)) +
     # facet_wrap(~PG) +
     scale_fill_manual(values = c('#F5B607', '#0B97D4')) +
     theme_light() +
@@ -335,7 +329,8 @@ for (i in 1:length(strains)){
 }
 
 # save multiple plots into one big file
-ggsave(file = here('exploration', 'Mean_Intensity_ALL_STRAINS_noNeighborhoodIntensity.pdf'), marrangeGrob(grobs = plot_list, nrow = 1, ncol = 1),
+ggsave(file = here('exploration', 'Mean_Intensity_ALL_STRAINS_noNeighborhoodIntensity.pdf'), 
+       marrangeGrob(grobs = plot_list, nrow = 1, ncol = 1),
        width = 11, height = 7)
 
 
@@ -371,24 +366,35 @@ ggsave(file = here('exploration', 'MeanIntensity_by_size_phylogroup.pdf'),
 # this piece of code calculates FC per replicate, and then calculate the mean 
 # of the FCs, its SD and also the median
 FC_means = data_filt_mad %>% 
-  group_by(Metf, Replicate, PG, Well, ID, Strainname, biofilm_0mM, biofilm_50mM) %>% 
+  group_by(Metf, Replicate, PG, Well, ID, Strainname, Annotation_0mM, Annotation_50mM) %>% 
   summarise(Mean = mean(Mean_Intensity)) %>% 
   pivot_wider(names_from = Metf, values_from = Mean, names_prefix = 'Metf_') %>% 
   mutate(FC = Metf_50mM/Metf_0mM) %>%
-  group_by(PG, Well, ID, Strainname, biofilm_0mM, biofilm_50mM)  %>% 
+  group_by(PG, Well, ID, Strainname, Annotation_0mM, Annotation_50mM)  %>% 
   summarise(Mean_FC = mean(FC, na.rm = TRUE),
             SD_FC = sd(FC, na.rm = TRUE),
             Median_FC = median(FC, na.rm = TRUE))
 
 FC_means %>% 
-  arrange(FC_means) %>% 
-  ggplot(aes(x = ID, y = Mean_FC)) +
-  geom_pointrange(aes(ymin = Mean_FC - SD_FC, ymax = Mean_FC + SD_FC))
+  drop_na(ID) %>% 
+  # arrange(FC_means) %>% 
+  ggplot(aes(x = fct_reorder(ID, Mean_FC), y =  Mean_FC)) +
+  geom_pointrange(aes(ymin = Mean_FC - SD_FC, ymax = Mean_FC + SD_FC)) +
+  theme_classic()
 
 # save a list of unique IDs 
 FC_means_unique = FC_means %>% 
   ungroup %>% 
   distinct(ID, .keep_all = T)
+
+FC_means_unique %>% 
+  drop_na(ID) %>% 
+  # arrange(FC_means) %>% 
+  ggplot(aes(x = fct_reorder(ID, Mean_FC), y =  Mean_FC)) +
+  geom_pointrange(aes(ymin = Mean_FC - SD_FC, ymax = Mean_FC + SD_FC)) +
+  theme_classic()
+
+
 
 write_csv(FC_means, here('analysis', 'FC_means.csv'))
 
@@ -397,7 +403,7 @@ write_csv(FC_means_unique, here('analysis', 'FC_means_unique.csv'))
 
 
 sum.stats = data_filt_mad %>% 
-  group_by(Metf, ID, Strainname, biofilm_0mM, biofilm_50mM) %>% 
+  group_by(Metf, ID, Strainname, Annotation_0mM, Annotation_50mM) %>% 
   summarise(Mean = mean(Mean_Intensity),
             SD = sd(Mean_Intensity)) 
 
@@ -409,7 +415,8 @@ list_of_datasets = list(
 
 library(openxlsx)
 
-write.xlsx(list_of_datasets, here('analysis', 'Summary_Stats_FC.xlsx'))
+write.xlsx(list_of_datasets, here('analysis', 'Summary_Stats_FC.xlsx'),
+           overwrite = T)
 
 
 # # # # # # # # # # # # # # # #  
@@ -419,7 +426,7 @@ write.xlsx(list_of_datasets, here('analysis', 'Summary_Stats_FC.xlsx'))
 
 # per plate and ID
 stat_res = data_filt_mad %>%
-  group_by(PG, ID, Strainname, B_phenotype, biofilm_0mM, biofilm_50mM, Broadphenotype, Well) %>%
+  group_by(PG, ID, Strainname, Annotation_0mM, Annotation_50mM, Broadphenotype, Well) %>%
   nest() %>%
   mutate(models = map(.x = data, .f = lm, formula = 'Mean_Intensity ~ Metf')) %>%
   # mutate(results = map(.f = exploration, .x = models)) %>%	
@@ -440,14 +447,14 @@ stat_res = data_filt_mad %>%
   select(PG, Well, FC, log2FC, Met_0mM, Met_50mM) %>%
   left_join(stat_res) %>%
   ungroup %>%
-  select(PG, Well, ID, Strainname, Broadphenotype, B_phenotype, biofilm_0mM, biofilm_50mM, FC, log2FC,Met_0mM, Met_50mM, estimate:FDR_stars) %>%
+  select(PG, Well, ID, Strainname, Broadphenotype, Annotation_0mM, Annotation_50mM, FC, log2FC,Met_0mM, Met_50mM, estimate:FDR_stars) %>%
   left_join(data_filt_mad %>% 
               select(PG, ID, Strainname, Broadphenotype, Well, phylogroup) %>% unique)
 
 
 # no duplicates
 stat_res2 = data_filt_mad %>%
-  group_by(ID, Strainname, B_phenotype,biofilm_0mM, biofilm_50mM,  Broadphenotype) %>%
+  group_by(ID, Strainname, Annotation_0mM, Annotation_50mM,  Broadphenotype) %>%
   nest() %>%
   mutate(models = map(.x = data, .f = lm, formula = 'Mean_Intensity ~ Metf')) %>%
   # mutate(results = map(.f = exploration, .x = models)) %>%	
@@ -468,7 +475,7 @@ stat_res2 = data_filt_mad %>%
   select(ID, Strainname, FC, log2FC, Met_0mM, Met_50mM) %>%
   left_join(stat_res2) %>%
   ungroup %>%
-  select(ID, Strainname, Broadphenotype, B_phenotype,biofilm_0mM, biofilm_50mM,  FC, log2FC, Met_0mM, Met_50mM, estimate:FDR_stars) %>%
+  select(ID, Strainname, Broadphenotype, Annotation_0mM, Annotation_50mM,  FC, log2FC, Met_0mM, Met_50mM, estimate:FDR_stars) %>%
   left_join(data_filt_mad %>% 
               select(ID, Strainname, Broadphenotype, phylogroup) %>% unique)
 
@@ -481,8 +488,10 @@ stats_metadata = data.frame(tables, description)
 # save statistics list
 list_of_datasets = list('metadata' = stats_metadata, 'Stats_per_plate' = stat_res, 'Stats_per_strain' = stat_res2)
 
-write.xlsx(list_of_datasets, here('analysis', 'worm_imaging_stats.xlsx'), colNames = T, rowNames = F) 
-write.xlsx(list_of_datasets, here('exploration', 'worm_imaging_stats.xlsx'), colNames = T, rowNames = F) 
+write.xlsx(list_of_datasets, here('analysis', 'worm_imaging_stats.xlsx'), 
+           colNames = T, rowNames = F, overwrite = T) 
+write.xlsx(list_of_datasets, here('exploration', 'worm_imaging_stats.xlsx'), 
+           colNames = T, rowNames = F, overwrite = T) 
 
 
 # check some duplicated strains
@@ -492,7 +501,7 @@ stat_res %>%
 
 
 stat_res2 %>% 
-  filter(biofilm_50mM == 'normal', 
+  filter(Annotation_50mM == 'normal', 
          Met_0mM < 4000) %>% 
   drop_na(phylogroup) %>%
   filter(!(phylogroup %in% c('cladeI','Non Escherichia'))) %>% 
@@ -502,6 +511,23 @@ stat_res2 %>%
 
 
 # sublibrary --------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
