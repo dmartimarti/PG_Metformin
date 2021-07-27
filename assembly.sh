@@ -104,7 +104,10 @@ cd /mnt/d/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblie
 
 
 # example of antiSMASH command line
-antismash NT12010.gbk --genefinding-tool none --cb-knownclusters --cb-general --cb-subclusters --asf --pfam2go -c 6 -v
+antismash NT12010_146.gbk --genefinding-tool none --cb-knownclusters \
+   --cb-general --cb-subclusters --asf --pfam2go --smcog-trees \
+    --cc-mibig --fullhmmer  --rre --cc-mibig\
+   -c 6 -v --output-dir TEST
 
 
 
