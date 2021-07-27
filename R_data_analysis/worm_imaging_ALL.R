@@ -59,6 +59,8 @@ all_FC_metadata %>%
   geom_point(size = 2, alpha = 0.7)
 
 
+
+# save all genomes without biofilm at 50mM
 all_FC_metadata %>% 
   drop_na(Mean_FC) %>% 
   filter(Annotation_50mM == 'normal') %>% 
@@ -68,6 +70,55 @@ all_FC_metadata %>%
   write_delim('worm_phenotype_no_biofilm.txt', delim = '\t')
 
 
+# save all genomes 
+all_FC_metadata %>% 
+  drop_na(Mean_FC) %>% 
+  # filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_ALL.txt', delim = '\t')
+
+# save ECO genomes without biofilm
+all_FC_metadata %>% 
+  drop_na(Mean_FC) %>% 
+  filter(Origin == 'ECOREF') %>% 
+  filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_ECOREF_no_biofilm.txt', delim = '\t')
+
+# save ECO genomes
+all_FC_metadata %>% 
+  drop_na(Mean_FC) %>% 
+  filter(Origin == 'ECOREF') %>% 
+  # filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_ECOREF.txt', delim = '\t')
+
+
+# save AUS genomes without biofilm
+all_FC_metadata %>% 
+  drop_na(Mean_FC) %>% 
+  filter(Origin == 'AUS') %>% 
+  filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_AUS_no_biofilm.txt', delim = '\t')
+
+# save AUS genomes
+all_FC_metadata %>% 
+  drop_na(Mean_FC) %>% 
+  filter(Origin == 'AUS') %>% 
+  # filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_AUS.txt', delim = '\t')
 
 
 
