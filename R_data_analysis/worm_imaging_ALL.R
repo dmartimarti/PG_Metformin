@@ -62,9 +62,10 @@ all_FC_metadata %>%
 all_FC_metadata %>% 
   drop_na(Mean_FC) %>% 
   filter(Annotation_50mM == 'normal') %>% 
-  mutate(fasta = str_sub(fasta, -6))
-  select(IDs = ID, FC_worm = Mean_FC) %>% 
-  write_delim()
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_no_biofilm.txt', delim = '\t')
 
 
 
