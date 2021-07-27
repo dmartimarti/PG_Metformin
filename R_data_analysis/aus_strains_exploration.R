@@ -24,7 +24,7 @@ theme_set(theme_light())
 # # # # # # # # # # # # # # # 
 
 # data from imaging scores
-worm_data = read_delim("worm_imaging_AUS.csv", "\t",  trim_ws = TRUE) %>% select(-X1)
+worm_data = read_delim("worm_imaging_AUS.csv", "\t",  trim_ws = TRUE) %>% select(-`...1`)
 # rename variables with underscores
 names(worm_data) = gsub(" ", "_", names(worm_data))
 
@@ -133,6 +133,10 @@ write.xlsx(biofilm_strain_annotation, '201201_biofilm_annotation_australian_stra
 
 
 
+
+
+
+
 # join everything to have names, IDs and all that stuff in one table
 data_filt_full = data_filt_full %>%
   left_join(biofilm_strain_annotation,by=c('ID','PG')) %>%
@@ -146,7 +150,7 @@ data_filt_full = data_filt_full %>%
 
 # exploratory plots -------------------------------------------------------
 
-
+write_csv(data_filt_full, 'AUS_worm_data_full.csv')
 
 # test
 # Strain 0 is OP50
@@ -213,15 +217,6 @@ isnt_out_tukey <- function(x, k = 1.5, na.rm = TRUE) {
   
   (quar[1] - k * iqr <= x) & (x <= quar[2] + k * iqr)
 }
-
-# Mahalanobis detection (MULTIVARIATE)
-maha_dist <- . %>% select_if(is.numeric) %>%
-  mahalanobis(center = colMeans(.), cov = cov(.))
-
-isnt_out_maha <- function(tbl, isnt_out_f, ...) {
-  tbl %>% maha_dist() %>% isnt_out_f(...)
-}
-
 
 isnt_out_funs <- funs(
   z = isnt_out_z,
