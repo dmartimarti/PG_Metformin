@@ -84,7 +84,7 @@ mp_muts %>%
   mutate(prop = case_when(Strain == 'P_strains' ~ N / 19,
                           Strain == 'M_strains' ~ N / 12)) %>% 
   # remove rubish
-  filter(!(GENE %in% c('NO GENE','insB6_1', 'insA6_1'))) %>% 
+  # filter(!(GENE %in% c('NO GENE','insB6_1', 'insA6_1'))) %>% 
   ggplot(aes(x = fct_reorder(GENE, prop), y = prop, fill = GENE)) +
   geom_histogram(stat="identity")  +
   labs(x = 'Gene variant',
@@ -96,6 +96,63 @@ mp_muts %>%
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
 ggsave(here('exploration','mut_props_MP_strains.pdf'), height = 8, width = 10)
+
+
+
+
+#  effects on pangenome strains --------------------------------------------
+
+
+pan_muts = muts %>%
+  filter(!(Strain %in% c('M_strains', 'P_strains', 'Nissle')))
+
+
+
+pan_muts %>% 
+  # remove synonymous variants, not informative
+  filter(Variant != 'synonymous_variant') %>%
+  group_by(Strain) %>% 
+  count(GENE) %>% 
+  ggplot(aes(x = fct_reorder(GENE,n), y = n, fill = GENE)) +
+  geom_histogram(stat="identity")  +
+  labs(x = 'Gene variant',
+       y = 'Number of total elements') +
+  facet_wrap(~Strain,
+             ncol = 3,
+             scales = 'free_x') +
+  geom_text(aes(y = n+(2), x = GENE, label = round(n,0))) + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+ggsave(here('exploration','mutations_Pangenome_strains.pdf'), height = 8, width = 10)
+
+
+
+pan_muts %>% 
+  # remove synonymous variants, not informative
+  filter(Variant != 'synonymous_variant') %>%
+  # group_by(Strain) %>% 
+  count(GENE) %>% 
+  ggplot(aes(x = fct_reorder(GENE,n), y = n, fill = GENE)) +
+  geom_histogram(stat="identity")  +
+  labs(x = 'Gene variant',
+       y = 'Number of total elements') +
+  # facet_wrap(~Strain,
+  #            ncol = 3,
+  #            scales = 'free_x') +
+  geom_text(aes(y = n+(1), x = GENE, label = round(n,0))) + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+ggsave(here('exploration','mutations_Pangenome_total.pdf'), height = 8, width = 11)
+
+
+
+
+
+
+
+
+
+
 
 
 
