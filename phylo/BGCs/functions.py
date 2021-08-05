@@ -11,6 +11,7 @@ import os
 import pandas as pd
 import re
 import json
+from rdkit import Chem
 
 
 def file_parser(folder, pattern = '.json'):
@@ -41,4 +42,14 @@ def read_json(json_file):
     with open(json_file) as f:
         content = json.load(f)
     return(content)
+
+
+def smiles2mol(smiles):
+    """
+    reads a smiles, sanitizes it, and returns a rdkit mol
+    """
+    mol = Chem.MolFromSmiles(str(smiles), sanitize=True)
+    Chem.SanitizeMol(mol)
+    return mol
+
 
