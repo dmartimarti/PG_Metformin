@@ -1,6 +1,7 @@
 library(readr)
 library(tidyverse)
 library(here)
+library(cowplot)
 
 theme_set(theme_classic() +
             theme(axis.text.x = element_text(size = 13, color = 'black'),
@@ -46,8 +47,9 @@ mp_muts %>%
        y = 'Number of total elements') +
   facet_wrap(~Strain,
              ncol = 1) +
-  geom_text(aes(y = n+(2), x = GENE, label = round(n,0))) + 
-  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+  geom_text(aes(y = n+(2), x = GENE, label = round(n,0))) +
+  theme_half_open(12) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1)) 
 
 ggsave(here('exploration','mutations_MP_strains.pdf'), height = 8, width = 10)
 
@@ -63,6 +65,7 @@ mp_muts %>%
        y = 'Number of total elements') +
   facet_wrap(~Strain*Colony)+
   geom_text(aes(y = N+(1), x = GENE, label = round(N,0))) + 
+  theme_half_open(12) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
 ggsave(here('exploration','mutations_MP_strains_big.pdf'), height = 18, width = 25)
@@ -93,6 +96,7 @@ mp_muts %>%
   geom_hline(yintercept = 1) +
   facet_wrap(~Strain,
              ncol = 1)+
+  theme_half_open(12) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
 ggsave(here('exploration','mut_props_MP_strains.pdf'), height = 8, width = 10)
@@ -121,6 +125,7 @@ pan_muts %>%
              ncol = 3,
              scales = 'free_x') +
   geom_text(aes(y = n+(2), x = GENE, label = round(n,0))) + 
+  theme_half_open(12) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
 ggsave(here('exploration','mutations_Pangenome_strains.pdf'), height = 8, width = 10)
@@ -140,6 +145,7 @@ pan_muts %>%
   #            ncol = 3,
   #            scales = 'free_x') +
   geom_text(aes(y = n+(1), x = GENE, label = round(n,0))) + 
+  theme_half_open(12) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
 ggsave(here('exploration','mutations_Pangenome_total.pdf'), height = 8, width = 11)
