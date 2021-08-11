@@ -74,6 +74,9 @@ for genome in tqdm(genomes, total=len(genomes)):
     for i in range(len(list_of_files)):
         record = read_gbk(list_of_files[i])
         record.id = genome
+        record.description = 'Escherichia coli ' + genome
+        record.annotations['source'] = 'Escherichia coli ' + genome
+        record.annotations['organism'] = 'Escherichia coli ' + genome
         path_to_save = os.path.join(path, genome, genome)+'.region00'+str(i+1)+'.gbk'
         SeqIO.write(record, path_to_save, format = 'genbank')
 
