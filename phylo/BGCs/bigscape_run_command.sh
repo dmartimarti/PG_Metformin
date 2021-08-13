@@ -1,6 +1,3 @@
-bigscape
+cd /mnt/d/MRC_Postdoc/Pangenomic/
 
-python ~/Documents/BiG-SCAPE/bigscape.py -i /gbks --pfam_dir /home/dani/Documents/BiG-SCAPE/pfam -o output --mibig --mode global
-
-
-sudo ~/bin/run_bigscape gbks output
+sudo ~/bin/run_bigscape gbks output_test -c 8

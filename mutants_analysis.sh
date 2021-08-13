@@ -17,28 +17,61 @@ prokka --outdir NT12321 --genus Escherichia --species coli --proteins /home/dani
 prokka --outdir OP50 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix OP50 --cpus 8 OP50.fasta
 prokka --outdir Nissle_Tn_parental --genus Escherichia --species coli --usegenus --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix Nissle_Tn_parental --cpus 8 Nissle_Tn_parental.fasta
 
+# for Nissle tn seq mutants
 
+cd /mnt/d/MRC_Postdoc/Pangenomic/mutants_analysis/references/Nissle_references
+
+prokka --outdir Nissle_Tn_parental --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_Tn_parental --cpus 8 Nissle_Tn_parental.fasta
+
+prokka --outdir Nissle_P11_2_P13 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P11_2_P13 --cpus 8 Nissle_P11_2_P13.fasta
+
+prokka --outdir Nissle_P2_1_M17 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P2_1_M17 --cpus 8 Nissle_P2_1_M17.fasta
+
+prokka --outdir Nissle_P3_1_G20 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P3_1_G20 --cpus 8 Nissle_P3_1_G20.fasta
+
+prokka --outdir Nissle_P3_1_K2 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P3_1_K2 --cpus 8 Nissle_P3_1_K2.fasta
+
+prokka --outdir Nissle_P4_1_G16 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P4_1_G16 --cpus 8 Nissle_P4_1_G16.fasta
+
+prokka --outdir Nissle_P6_2_C1 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P6_2_C1 --cpus 8 Nissle_P6_2_C1.fasta
+
+prokka --outdir Nissle_P8_1_G22 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P8_1_G22 --cpus 8 Nissle_P8_1_G22.fasta
+
+prokka --outdir Nissle_P14_2_O16 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_Nissle_1917_ASM71459v1.gbff \
+ --prefix Nissle_P14_2_O16 --cpus 8 Nissle_P14_2_O16.fasta
 
 
 
 ### trimmomatic
-# #example
-# conda activate phylo
-# cd /mnt/d/MRC_Postdoc/Pangenomic/mutants_analysis/raw_sequences/NT12010
+#example
+conda activate phylo
+cd /mnt/d/MRC_Postdoc/Pangenomic/mutants_analysis/raw_sequences/Nissle
 
-# for R1 in *R1*
-# do   	
-#    R2=${R1//R1.fastq.gz/R2.fastq.gz}
+for R1 in *R1*
+do   	
+   R2=${R1//R1.fastq.gz/R2.fastq.gz}
 
-#    R1paired=${R1//.fastq.gz/_paired.fastq.gz}
-#    R1unpaired=${R1//.fastq.gz/_unpaired.fastq.gz}
-#    R2paired=${R2//.fastq.gz/_paired.fastq.gz}
-#    R2unpaired=${R2//.fastq.gz/_unpaired.fastq.gz}
+   R1paired=${R1//.fastq.gz/_paired.fastq.gz}
+   R1unpaired=${R1//.fastq.gz/_unpaired.fastq.gz}
+   R2paired=${R2//.fastq.gz/_paired.fastq.gz}
+   R2unpaired=${R2//.fastq.gz/_unpaired.fastq.gz}
    
-#    trimmomatic PE -threads 8 -phred33 $R1 $R2 $R1paired $R1unpaired $R2paired $R2unpaired \
-#    ILLUMINACLIP:TruSeq3-PE.fa:4:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:140
+   trimmomatic PE -threads 8 -phred33 $R1 $R2 $R1paired $R1unpaired $R2paired $R2unpaired \
+   ILLUMINACLIP:TruSeq3-PE.fa:4:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:140
 
-# done
+done
+
+mkdir filtered
+
+mv *paired* ./filtered
 
 
 
@@ -168,3 +201,25 @@ tabix ../reference/ref.sorted.gff.gz
 jbrowse add-track ../reference/ref.sorted.gff.gz --load copy
 # run jbrowse 2
 npx serve .
+
+
+
+
+
+
+
+
+
+### Genome assembly of Nissle with Nissle reference
+
+cd /mnt/d/MRC_Postdoc/Pangenomic/mutants_analysis/raw_sequences/Nissle/filtered
+
+# ref = GCF_000714595.1_ASM71459v1_genomic.fna
+
+conda activate assembly
+
+spades.py -1 Nissle_Tn_parental_R1_001_paired.fastq.gz -2 Nissle_Tn_parental_R2_001_paired.fastq.gz \
+	-s Nissle_Tn_parental_R1_001_unpaired.fastq.gz -s Nissle_Tn_parental_R2_001_unpaired.fastq.gz \
+	--isolate -t 8 -m 16 --trusted-contigs ASM71459v1.fasta \
+	-k 21,33,55,77,89,99,107,115,121,127 -o Nissle_parental 
+
