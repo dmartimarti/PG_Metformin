@@ -1,0 +1,108 @@
+---
+title: "E. coli secondary metabolism at the pangenome level"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+Bacterial species comprise multitude of individuals that are genetically different one from each other. The group of these individuals form what is called the pangenome concept of a species, as it also exists for other higher taxonomical levels such as genus or family. The genetic differences of these individuals have been extensively studied for some bacterial species, such as _Escherichia coli_, where it has been shown that members can vary greatly in their genetic contents. It is also known that bacterial species can carry clusters of physically close genes that encode for molecules with important roles in their ecology. These clusters, named BGCs (biosynthetic gene clusters) can vary greatly from strain to strain, highlighting the great diversity that can exist within a species, and the implications and bias we have when considering a bacterial species as something homogeneous. In this study we aim to describe and understand the BGCs of the _E. coli_ pangenome. 
+
+```{r echo=FALSE, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(readr)
+library(cowplot)
+library(here)
+library(ggpubr)
+```
+
+
+```{r, echo=FALSE, message=FALSE, cache=TRUE}
+bgc = read_csv("antismash_summary.csv")
+
+
+smiles = read_csv("antismash_summary_smiles.csv")
+
+
+metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
+                      sheet = "metadata")
+
+
+genome_info = read_delim("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv", 
+                         delim = "\t", escape_double = FALSE, 
+                         col_types = cols(Assembly = col_character()), 
+                         trim_ws = TRUE) %>% 
+  rename(genome = Assembly,
+         genome_length = `Total length (>= 0 bp)`,
+         genome_length_500 =`Total length`,
+         gc_content = `GC (%)`) %>% 
+  select(genome, genome_length, genome_length_500, gc_content)
+
+
+
+# this is the info of the core genome genes
+core_genome_info = read_delim("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/core_genomes/quast_quality/transposed_report_core_genomes.tsv", 
+                         delim = "\t", escape_double = FALSE, 
+                         col_types = cols(Assembly = col_character()), 
+                         trim_ws = TRUE) %>% 
+  rename(genome = Assembly,
+         genome_length = `Total length (>= 0 bp)`,
+         genome_length_500 =`Total length`,
+         gc_content_core = `GC (%)`) %>% 
+  select(genome, genome_length, genome_length_500, gc_content_core)
+```
+
+## Results
+
+We are currently working with a set of 747 _E. coli_ genomes that have been sequenced and assembled (see Methods). Taking a look at the distribution of genome size, we can see that the mean is 5046945 (s.d. 283905) bases. 
+
+
+```{r echo=FALSE, cache=TRUE}
+genome_info %>% 
+  filter(genome != '2.3') %>% 
+  ggplot(aes(genome_length)) +
+  geom_histogram(aes(y = ..density..) ,bins = 30, color = 'black',
+                 fill = 'dodgerblue2') +
+  geom_density(fill = 'darkslategray3', alpha = .3) +
+  labs(x = 'Genome size',
+       y = 'Density') +
+  theme_cowplot(14)
+```
+
+Taking a look at the GC content of this collection, we see that it has a mean of 50.6 (s.d. 0.141)
+
+```{r echo=FALSE, cache=TRUE}
+genome_info %>% 
+  filter(genome != '2.3') %>% 
+  ggplot(aes(gc_content)) +
+  geom_histogram(aes(y = ..density..) ,bins = 30, color = 'black',
+                 fill = '#EB4D4D') +
+  geom_density(fill = c("#D64B4B"), alpha = .3) +
+  labs(x = 'GC content (%)',
+       y = 'Density') +
+  theme_cowplot(17)
+```
+
+Interestingly, when we represent the genome size against the GC content, we have a negative relationship, which in principle is not expected. 
+
+```{r echo=FALSE, message=FALSE}
+genome_info %>% 
+  filter(genome != '2.3') %>% 
+  mutate(genome_length = genome_length/1000000) %>%
+  ggplot(aes(x = genome_length, y = gc_content)) +
+  geom_point(shape = 21, fill = 'dodgerblue', size = 3, alpha = 0.5) +
+  geom_smooth(method = 'lm') +
+  labs(x = 'Genome size (Mb)',
+       y = 'GC content (%)') +
+  # scale_x_continuous(limits = c(4.3,6.516906)) +
+  # scale_y_continuous(limits = c(1,9), breaks = c(2,4,6,8)) +
+  stat_cor(method = "pearson", label.x = 5.2, label.y = 51.1,
+           p.accuracy = 0.001, r.accuracy = 0.01, size = 7,
+           aes(label = paste(..r.label.., ..p.label.., sep = "~`,`~"))) +
+  theme_cowplot(17)
+```
+
