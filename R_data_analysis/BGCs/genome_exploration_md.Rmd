@@ -22,10 +22,10 @@ library(ggpubr)
 
 
 ```{r, echo=FALSE, message=FALSE, cache=TRUE}
-bgc = read_csv("antismash_summary.csv")
+bgc = read_csv("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/BGCs/antismash_summary.csv")
 
 
-smiles = read_csv("antismash_summary_smiles.csv")
+smiles = read_csv("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/BGCs/antismash_summary_smiles.csv")
 
 
 metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
