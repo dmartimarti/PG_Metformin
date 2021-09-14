@@ -101,6 +101,104 @@ mp_muts %>%
 
 ggsave(here('exploration','mut_props_MP_strains.pdf'), height = 8, width = 10)
 
+### position of mutations within genes ####
+
+
+# all mutations from rcdA gene
+mp_muts %>% 
+  separate(AA_POS, into = c('mut_pos', 'prot_length'), sep = '/', 
+           convert = T, remove = F) %>% 
+  filter(GENE == 'rcdA') %>% 
+  group_by(GENE, Variant) %>% 
+  count(mut_pos) %>% 
+  left_join(expand_grid(mut_pos = 1:178)) %>% 
+  ggplot(aes(x = mut_pos, y = n, fill = Variant, group = Variant)) +
+  geom_histogram(stat = 'identity', color = 'black', size = 0.1) +
+  xlim(0,178) +
+  # facet_wrap(~GENE, scales = 'free_y') + 
+  labs(x = 'Number of mutations',
+       y = 'Position in the protein') +
+  theme(legend.position="top")
+
+ggsave(here('exploration','rcdA_mutations_pos.pdf'), height = 6, width = 9)
+
+
+
+# missense mutations from rcdA genes
+mp_muts %>% 
+  separate(AA_POS, into = c('mut_pos', 'prot_length'), sep = '/', 
+           convert = T, remove = F) %>% 
+  filter(GENE == 'rcdA', Variant == 'missense_variant') %>% 
+  group_by(GENE, Variant) %>% 
+  count(mut_pos) %>% 
+  left_join(expand_grid(mut_pos = 1:178)) %>% 
+  ggplot(aes(x = mut_pos, y = n)) +
+  geom_histogram(stat = 'identity', color = 'black', size = 0.4,
+                 fill = 'dodgerblue3') +
+  xlim(0,178) +
+  #facet_wrap(~GENE, scales = 'free_y') +
+  labs(x = 'Number of SNPs',
+       y = 'Position in the protein') 
+
+ggsave(here('exploration','rcdA_missense_mutations_pos.pdf'), height = 6, width = 9)
+
+
+
+
+
+### combined plot with domains ####
+
+doms = tibble('Domain'=c('DNA binding site', 'tetR domain'),
+              'begin_pos'=c(30,13),
+              'end_pos'=c(50,59))
+
+muts_plot = mp_muts %>% 
+  separate(AA_POS, into = c('mut_pos', 'prot_length'), sep = '/', 
+           convert = T, remove = F) %>% 
+  filter(GENE == 'rcdA', Variant == 'missense_variant') %>% 
+  group_by(GENE, Variant) %>% 
+  count(mut_pos) %>% 
+  left_join(expand_grid(mut_pos = 1:178)) %>% 
+  ggplot(aes(x = mut_pos, y = n)) +
+  geom_histogram(stat = 'identity', color = 'black', size = 0.4,
+                 fill = 'dodgerblue3') +
+  xlim(0,178) +
+  #facet_wrap(~GENE, scales = 'free_y') +
+  labs(x = 'Number of SNPs',
+       y = 'Position in the protein') +
+  coord_cartesian(ylim = c(-0, 2), clip = "off")
+
+doms_plot = ggplot(doms, aes(y = Domain)) +
+  geom_segment(aes(x = begin_pos, xend = end_pos, yend = Domain,
+                   color = Domain),
+               size = 4) +
+  guides(color='none') +
+  annotate('text', x = 70, y = 2, label = 'tetR domain') +
+  annotate('text', x = 70, y = 1, label = 'DNA binding') +
+  xlim(0,178) +
+  scale_color_manual(values = c('#F5D83C','#4B60F5')) +
+  theme_void() +
+  theme(
+        axis.text.y=element_blank())
+
+plot_grid(muts_plot, doms_plot, align = 'v', 
+          rel_heights = c(10, 1),ncol = 1)
+
+ggsave(here('exploration','rcdA_missense_mutations_pos_Domains.pdf'), height = 7, width = 9)
+
+
+### 3D representation of PDB files
+
+library(bio3d)
+
+pdb = read.pdb("pdb_files/rcdA_7aco.pdb")
+print(pdb)
+
+
+modes <- nma(pdb)
+plot(modes)
+
+plot.bio3d(pdb$atom$b[pdb$calpha], sse=pdb, typ="l", ylab="B-factor")
 
 
 
