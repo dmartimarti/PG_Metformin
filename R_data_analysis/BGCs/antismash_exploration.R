@@ -49,18 +49,50 @@ core_genome_info = read_delim("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/
 bgc %>% 
   filter(genome == 98)
 
+# fix the order of some names
+bgc = bgc %>% 
+  mutate(type = case_when(type == 'T1PKS|NRPS' ~ 'NRPS|T1PKS',
+                          type == 'NRPS-like|NRPS' ~ 'NRPS|NRPS-like',
+                          type == 'ladderane|arylpolyene' ~ 'arylpolyene|ladderane',
+                          type == 'NRPS|T1PKS|NRPS-like' ~ 'NRPS|NRPS-like|T1PKS',
+                          type == 'T1PKS|NRPS|NRPS-like' ~ 'NRPS|NRPS-like|T1PKS',
+                          TRUE ~ type))
+
+
+
 # exploration  ############
+
+### number of BGCs ####
 
 bgc %>% 
   count(type) %>% 
-  ggplot(aes(x = fct_reorder(type, n,.desc = TRUE), y = n)) +
-  geom_bar(stat='identity') +
-  theme_cowplot(12) +
+  ggplot(aes(x = fct_reorder(type, n,.desc = TRUE), y = n, fill = type)) +
+  geom_bar(stat='identity', color = 'black') +
+  theme_cowplot(14) +
   labs(y = 'Number of BGCs',
        x = NULL) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+  guides(fill = 'none') +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 
 ggsave(here('exploration', 'BGC_numbers.pdf'), height = 8, width = 10)
+
+
+
+bgc %>% 
+  separate_rows(type, sep = '\\|') %>% 
+  count(type) %>% 
+  ggplot(aes(x = fct_reorder(type, n,.desc = TRUE), y = n, fill = type)) +
+  geom_bar(stat='identity', color = 'black') +
+  theme_cowplot(14) +
+  labs(y = 'Number of BGCs',
+       x = NULL) +
+  guides(fill = 'none') +
+  viridis::scale_fill_viridis(discrete = T) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+
+
+ggsave(here('exploration', 'BGC_separate_numbers.pdf'), height = 8, width = 10)
 
 
 ## BGC density ####
@@ -294,52 +326,52 @@ ggsave(here('exploration', 'BGC_prop_by_phylogroup.pdf'), height = 13, width = 7
 
 library(cooccur)
 library(visNetwork)
-# Load finches data set.
-data(finches)
-finches[1:5, 1:5]
 
 
-co <- print(cooccur(finches, spp_names = TRUE))
+### create my own presence/absence matrix to analyse
+# genomes as rows, bgcs as columns
+
+bgc_pa = bgc %>% 
+  separate_rows(type, sep = '\\|') %>% 
+  select(genome, type) %>% 
+  mutate(present = 1) %>% 
+  pivot_wider(names_from = type, values_from = present, 
+              values_fn = {mean}, values_fill = 0)
+
+genome_names = bgc_pa %>% pull(genome)
+
+bgc_pa_matrix = bgc_pa %>% select(-genome) %>% 
+  as.matrix
+   
+rownames(bgc_pa_matrix) = genome_names
+
+
+
+### co-ocurrence analysis
+
+bgc_pa_matrix = t(bgc_pa_matrix)
+
+co_bgc = print(cooccur(bgc_pa_matrix, spp_names = TRUE))
 
 # Check sp1_name matches numeric label for species.
-co[, 'sp1_name'] == rownames(finches)[co$sp1]
-co[, 'sp2_name'] == rownames(finches)[co$sp2]
+co_bgc[, 'sp1_name'] == rownames(bgc_pa_matrix)[co_bgc$sp1]
+co_bgc[, 'sp2_name'] == rownames(bgc_pa_matrix)[co_bgc$sp2]
 
 
 # Create a data frame of the nodes in the network. 
-nodes <- data.frame(id = 1:nrow(finches),
-                    label = rownames(finches),
+nodes = data.frame(id = 1:nrow(bgc_pa_matrix),
+                    label = rownames(bgc_pa_matrix),
                     color = "#606482",
                     shadow = TRUE)
 
 # Create an edges dataframe from the significant pairwise co-occurrences.
-edges <- data.frame(from = co$sp1, to = co$sp2,
-                    color = ifelse(co$p_lt <= 0.05, "#B0B2C1", "#3C3F51"),
-                                   dashes = ifelse(co$p_lt <= 0.05, TRUE, FALSE))
+edges = data.frame(from = co_bgc$sp1, to = co_bgc$sp2,
+                    color = ifelse(co_bgc$p_lt <= 0.05, "#F2D133", "#0402A6"),
+                    dashes = ifelse(co_bgc$p_lt <= 0.05, FALSE, TRUE))
 
 # Plot.
 visNetwork(nodes = nodes, edges = edges) %>%
   visIgraphLayout(layout = "layout_with_kk")
 
 
-
-
-
-# gsub(pattern = "\\.|\\:|", replacement = ";", x = "R0.2021-03-17:Col0<F>-")
-# 
-# 
-# pattern = 'R[0-9]\\.\\d{4}\\-\\d{2}\\-\\d{2}\\:[:alnum:]+\\<[:alnum:]+\\>.'
-# 
-# str_subset(string = "R0.2021-03-17:Col0<F>-", pattern = '^R', negate = F)
-# 
-# 
-# 
-# str_replace_all(string = "R0.2021-03-17:Col0<F>-", 
-#             pattern = "[^\\w0-9-+]", 
-#             replacement = ';') %>% 
-#   str_split(pattern = ';', simplify = T)
-#   
-
-
-
-
+write.csv(as.data.frame(bgc_pa_matrix), 'bgc_pa_matrix.csv')
