@@ -101,8 +101,9 @@ mp_muts %>%
 
 ggsave(here('exploration','mut_props_MP_strains.pdf'), height = 8, width = 10)
 
-### position of mutations within genes ####
 
+
+### position of mutations within genes ####
 
 # all mutations from rcdA gene
 mp_muts %>% 
@@ -189,16 +190,65 @@ ggsave(here('exploration','rcdA_missense_mutations_pos_Domains.pdf'), height = 7
 
 ### 3D representation of PDB files
 
+
 library(bio3d)
 
-pdb = read.pdb("pdb_files/rcdA_7aco.pdb")
+pdb = read.pdb(here('pdb_files', 'pdb7aco.ent'))
+
 print(pdb)
 
 
 modes <- nma(pdb)
 plot(modes)
 
-plot.bio3d(pdb$atom$b[pdb$calpha], sse=pdb, typ="l", ylab="B-factor")
+plot.bio3d(pdb$atom$b[pdb$calpha], 
+           sse=pdb, typ="l", ylab="B-factor"
+           )
+
+# select only chain A
+inds <- atom.select(pdb, chain=c("A"))
+
+pdb2 <- trim.pdb(pdb, inds)
+
+
+plot.bio3d(pdb2$atom$b[pdb2$calpha], 
+           sse=pdb2, typ="l", ylab="B-factor"
+)
+
+
+
+rcdA_m1 = read.pdb(here('pdb_files', 'rcdA_M1_Gly51Glu.pdb'))
+rcdA_wt = read.pdb(here('pdb_files', 'rcdA_WT.pdb'))
+
+rcdA_aln = pdbaln(here('pdb_files', c('rcdA_M1_Gly51Glu.pdb',
+                           'rcdA_WT.pdb')), fit = TRUE,
+       web.args=list(email='dmartimarti@gmail.com'))
+
+
+
+str_aln = struct.aln(rcdA_m1,rcdA_wt,
+           web.args=list(email='dmartimarti@gmail.com'))
+
+
+rcdA_m1.ind <- atom.select(rcdA_m1, chain="A", resno=15:55, elety="CA")
+rcdA_wt.ind <- atom.select(rcdA_wt, chain="A", resno=15:55, elety="CA")
+
+# perform superposition
+xyz <- fit.xyz(fixed=rcdA_m1$xyz, mobile=rcdA_wt$xyz,
+               fixed.inds=rcdA_m1.ind$xyz,
+               mobile.inds=rcdA_wt.ind$xyz)
+
+# write coordinates to file
+write.pdb(rcdA_wt, xyz=xyz, file="rcdA_differences.pdb")
+
+
+pdbs = read.pdb(here('pdb_files', c('rcdA_M1_Gly51Glu.pdb',
+                                    'rcdA_WT.pdb')))
+
+geostas(pdb)
+
+
+
 
 
 
