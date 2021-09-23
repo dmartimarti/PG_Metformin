@@ -72,7 +72,7 @@ bgc %>%
   labs(y = 'Number of BGCs',
        x = NULL) +
   guides(fill = 'none') +
-  viridis::scale_fill_viridis(discrete = T) +
+  # viridis::scale_fill_viridis(discrete = T) +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 
 ggsave(here('exploration', 'BGC_numbers.pdf'), height = 8, width = 10)
@@ -88,7 +88,7 @@ bgc %>%
   labs(y = 'Number of BGCs',
        x = NULL) +
   guides(fill = 'none') +
-  viridis::scale_fill_viridis(discrete = T) +
+  # viridis::scale_fill_viridis(discrete = T) +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 
 
@@ -114,35 +114,38 @@ ggsave(here('exploration', 'BGC_density.pdf'), height = 8, width = 10)
 ##  genome size ####
 genome_info %>% 
   filter(genome != '2.3') %>% 
+  mutate(genome_length = genome_length/1000000) %>%
   ggplot(aes(genome_length)) +
   geom_histogram(aes(y = ..density..) ,bins = 30, color = 'black',
-                 fill = 'dodgerblue2') +
+                 fill = 'firebrick2') +
   geom_density(fill = 'darkslategray3', alpha = .3) +
-  labs(x = 'Genome size',
+  labs(x = 'Genome size (Mb)',
        y = 'Density') +
   theme_cowplot(14)
 
-ggsave(here('exploration', 'genome_size_density.pdf'), height = 8, width = 10)
+ggsave(here('exploration', 'genome_size_density.pdf'), height = 6, width = 8)
 
 # info about the core genome
 core_genome_info %>% 
   filter(genome != '2.3') %>% 
+  mutate(genome_length = genome_length/1000000) %>%
   ggplot(aes(genome_length)) +
   geom_histogram(aes(y = ..density..) ,bins = 30, color = 'black',
-                 fill = 'dodgerblue2') +
+                 fill = 'firebrick2') +
   geom_density(fill = 'darkslategray3', alpha = .3) +
-  labs(x = 'Genome size',
+  labs(x = 'Genome size (Mb)',
        y = 'Density') +
   theme_cowplot(14)
 
+ggsave(here('exploration', 'genome_size_CORE_density.pdf'), height = 6, width = 8)
 
 ##  GC content ####
 genome_info %>% 
   filter(genome != '2.3') %>% 
   ggplot(aes(gc_content)) +
   geom_histogram(aes(y = ..density..) ,bins = 30, color = 'black',
-                 fill = '#EB4D4D') +
-  geom_density(fill = c("#D64B4B"), alpha = .3) +
+                 fill = c("#228B22")) +
+  geom_density(fill = c("#228B22"), alpha = .3) +
   labs(x = 'GC content (%)',
        y = 'Density') +
   theme_cowplot(17)
@@ -153,12 +156,14 @@ core_genome_info %>%
   filter(genome != '2.3') %>% 
   ggplot(aes(gc_content_core)) +
   geom_histogram(aes(y = ..density..) ,bins = 30, color = 'black',
-                 fill = '#EB4D4D') +
-  geom_density(fill = c("#D64B4B"), alpha = .3) +
+                 fill = c("#228B22")) +
+  geom_density(fill = c("#228B22"), alpha = .3) +
   labs(x = 'GC content (%)',
        y = 'Density') +
   theme_cowplot(17)
 
+
+ggsave(here('exploration', 'GC_content_CORE_density.pdf'), height = 8, width = 10)
 
 ##  GC vs genome size ####
 genome_info %>% 
@@ -196,11 +201,10 @@ genome_info %>%
            aes(label = paste(..r.label.., ..p.label.., sep = "~`,`~"))) +
   theme_cowplot(17)
 
+ggsave(here('exploration', 'GC_vs_genomeSize_CORE.pdf'), height = 8, width = 10)
 
 
 ## genome size vs number of BGCs ####
-
-library(ggpubr)
 
 bgc %>% 
   group_by(genome) %>% 
@@ -247,6 +251,30 @@ ggsave(here('exploration', 'gc_content_vs_BGCs.pdf'), height = 8, width = 10)
 
 
 
+### repeated elements within genomes ####
+
+bgc %>% 
+  # separate_rows(type, sep = '\\|') %>%
+  group_by(genome, type) %>% 
+  count()  %>% 
+  mutate(repeated = ifelse(n > 1, 'yes', 'no')) %>% 
+  group_by(type, repeated) %>% 
+  count() %>% 
+  filter(repeated == 'yes') %>% 
+  ggplot(aes(x = fct_reorder(type, n, .desc=TRUE), y = n, 
+             fill = repeated, group = repeated)) +
+  geom_bar(stat='identity', fill = 'dodgerblue3', color = 'black') +
+  labs(
+    x = 'BGC type',
+    y = 'Number of times repeated within a genome'
+  ) +
+  theme_cowplot(13)  +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+
+ggsave(here('exploration', 'BGC_repeated.pdf'), height = 5, width = 6)
+
+
+
 
 
 ## smiles ####
@@ -283,30 +311,34 @@ bgc.meta = bgc %>%
               select(genome, phylogroup, Broadphenotype))
 
 bgc.meta %>% 
+  separate_rows(type, sep = '\\|') %>% 
   group_by(phylogroup) %>% 
   count(type) %>% 
-  ggplot(aes(x = fct_reorder(type, n), y = n)) +
-  geom_bar(stat='identity') +
+  ggplot(aes(x = fct_reorder(type, n, .desc=TRUE), y = n, fill = type)) +
+  geom_bar(stat='identity', color = 'black') +
   theme_cowplot(12) +
   labs(y = 'Number of elements',
        x = NULL) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
-  facet_wrap(~phylogroup, ncol = 2)
+  facet_wrap(~phylogroup, ncol = 1)
 
-ggsave(here('exploration', 'BGC_by_phylogroup.pdf'), height = 9, width = 14)
+ggsave(here('exploration', 'BGC_by_phylogroup.pdf'), height = 8, width = 6)
 
 
 bgc.meta %>% 
   filter(phylogroup != 'cladeI') %>% 
+  separate_rows(type, sep = '\\|') %>% 
   group_by(genome, phylogroup, type) %>% 
   summarise(N = n()) %>% 
   group_by(phylogroup) %>% 
   mutate(
     new_n = n(),
     prop = N / n()) %>% 
-  ggplot(aes(x = fct_reorder(type, prop), y = prop)) +
-  geom_bar(stat='identity') +
-  theme_cowplot(12) +
+  group_by(phylogroup, type) %>% 
+  summarise(N = sum(prop)) %>% 
+  ggplot(aes(x = fct_reorder(type, N, .desc=T), y = N, fill = type)) +
+  geom_bar(stat='identity', color = 'black') +
+  theme_cowplot(14) +
   labs(y = 'Proportion of total elements',
        x = NULL) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
@@ -314,7 +346,7 @@ bgc.meta %>%
   facet_wrap(~phylogroup, ncol = 1)
 
 
-ggsave(here('exploration', 'BGC_prop_by_phylogroup.pdf'), height = 13, width = 7)
+ggsave(here('exploration', 'BGC_prop_by_phylogroup.pdf'), height = 8, width = 6)
 
 
 
