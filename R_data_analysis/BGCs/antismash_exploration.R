@@ -8,6 +8,38 @@ library(readr)
 library(cowplot)
 library(here)
 library(ggpubr)
+library(showtext)
+library(ggtext)
+
+# Theme settings for all plots
+
+theme_nice = theme_set(theme_cowplot(14) + 
+            theme(
+              plot.title = element_textbox_simple(family = 'patua-one', size = 20),
+              plot.title.position = 'plot',
+              plot.caption = element_markdown(hjust = 0, color='grey50',
+                                              margin = margin(t=10)),
+              plot.caption.position = 'plot'
+            ))
+
+
+theme_nice_45 = theme_set(theme_cowplot(14) + 
+                         theme(
+                           axis.text.x = element_text(angle = 45, vjust = 0.5),
+                           plot.title = element_textbox_simple(family = 'patua-one', size = 20),
+                           plot.title.position = 'plot',
+                           plot.caption = element_markdown(hjust = 0, color='grey50',
+                                                           margin = margin(t=10)),
+                           plot.caption.position = 'plot'
+                         ))
+
+
+
+font_add_google('Patua One', 'patua-one')
+
+showtext_auto()
+
+# load data ---------------------------------------------------------------
 
 
 bgc = read_csv("antismash_summary.csv")
@@ -70,10 +102,12 @@ bgc %>%
   geom_bar(stat='identity', color = 'black') +
   theme_cowplot(14) +
   labs(y = 'Number of BGCs',
-       x = NULL) +
+       x = NULL, 
+       title = 'Distribution of BGCs',
+       caption = '<i> Distribution of the different BGCs across the 746 
+       bacterial strains in our collection </i>') +
   guides(fill = 'none') +
-  # viridis::scale_fill_viridis(discrete = T) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+  theme_nice
 
 ggsave(here('exploration', 'BGC_numbers.pdf'), height = 8, width = 10)
 
