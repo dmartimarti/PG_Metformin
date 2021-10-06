@@ -17,6 +17,8 @@ prokka --outdir NT12321 --genus Escherichia --species coli --proteins /home/dani
 prokka --outdir OP50 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix OP50 --cpus 8 OP50.fasta
 prokka --outdir Nissle_Tn_parental --genus Escherichia --species coli --usegenus --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix Nissle_Tn_parental --cpus 8 Nissle_Tn_parental.fasta
 
+prokka --outdir GFP_ExpEv --genus Escherichia --species coli --usegenus --prefix GFP_ExpEv --cpus 8 GFP_ExpEv.fasta
+
 # for Nissle tn seq mutants
 
 cd /mnt/d/MRC_Postdoc/Pangenomic/mutants_analysis/references/Nissle_references
@@ -179,6 +181,14 @@ snippy --outdir ./results/P_strains/P16 --ref ./references/OP50/OP50.gbk --R1 ./
 snippy --outdir ./results/P_strains/P17 --ref ./references/OP50/OP50.gbk --R1 ./raw_sequences/P_strains/P17_R1.fastq.gz --R2 ./raw_sequences/P_strains/P17_R2.fastq.gz --cpus 8 --report
 snippy --outdir ./results/P_strains/P18 --ref ./references/OP50/OP50.gbk --R1 ./raw_sequences/P_strains/P18_R1.fastq.gz --R2 ./raw_sequences/P_strains/P18_R2.fastq.gz --cpus 8 --report
 snippy --outdir ./results/P_strains/P19 --ref ./references/OP50/OP50.gbk --R1 ./raw_sequences/P_strains/P19_R1.fastq.gz --R2 ./raw_sequences/P_strains/P19_R2.fastq.gz --cpus 8 --report
+
+# Exp Ev strains
+snippy --outdir ./results/exp_ev_Sim/A7 --ref ./references/GFP_ExpEv/GFP_ExpEv.gbk --R1 ./raw_sequences/exp_ev_Sim/A7_S2_L001_R1_001.fastq.gz --R2 ./raw_sequences/exp_ev_Sim/A7_S2_L001_R2_001.fastq.gz --cpus 8 --report
+snippy --outdir ./results/exp_ev_Sim/D1 --ref ./references/GFP_ExpEv/GFP_ExpEv.gbk --R1 ./raw_sequences/exp_ev_Sim/D1_S3_L001_R1_001.fastq.gz --R2 ./raw_sequences/exp_ev_Sim/D1_S3_L001_R2_001.fastq.gz --cpus 8 --report
+
+
+snippy --outdir ./results/exp_ev_Sim/A7_12010 --ref ./references/NT12010/NT12010.gbk --R1 ./raw_sequences/exp_ev_Sim/A7_S2_L001_R1_001.fastq.gz --R2 ./raw_sequences/exp_ev_Sim/A7_S2_L001_R2_001.fastq.gz --cpus 6 --report
+snippy --outdir ./results/exp_ev_Sim/D1_12010 --ref ./references/NT12010/NT12010.gbk --R1 ./raw_sequences/exp_ev_Sim/D1_S3_L001_R1_001.fastq.gz --R2 ./raw_sequences/exp_ev_Sim/D1_S3_L001_R2_001.fastq.gz --cpus 6 --report
 
 
 
