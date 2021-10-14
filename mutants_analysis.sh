@@ -15,9 +15,9 @@ prokka --outdir NT12056 --genus Escherichia --species coli --proteins /home/dani
 prokka --outdir NT12062 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix NT12062 --cpus 8 NT12062.fasta
 prokka --outdir NT12321 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix NT12321 --cpus 8 NT12321.fasta
 prokka --outdir OP50 --genus Escherichia --species coli --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix OP50 --cpus 8 OP50.fasta
-prokka --outdir Nissle_Tn_parental --genus Escherichia --species coli --usegenus --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix Nissle_Tn_parental --cpus 8 Nissle_Tn_parental.fasta
+prokka --outdir Nissle_Tn_parental --genus Escherichia --species coli --usegenus --proteins  /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix Nissle_Tn_parental --cpus 8 Nissle_Tn_parental.fasta
 
-prokka --outdir GFP_ExpEv --genus Escherichia --species coli --usegenus --prefix GFP_ExpEv --cpus 8 GFP_ExpEv.fasta
+prokka --outdir GFP_ExpEv --genus Escherichia --species coli --usegenus --proteins /home/dani/anaconda3/envs/prokka/db/genebank/E_coli_MG1655_complete.gb --prefix GFP_ExpEv --cpus 8 GFP_ExpEv.fasta
 
 # for Nissle tn seq mutants
 
