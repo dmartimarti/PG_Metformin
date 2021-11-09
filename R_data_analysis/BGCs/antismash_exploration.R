@@ -13,7 +13,7 @@ library(ggtext)
 
 # Theme settings for all plots
 
-theme_nice = theme_set(theme_cowplot(14) + 
+theme_nice = theme_set(theme_cowplot(16) + 
             theme(
               plot.title = element_textbox_simple(family = 'patua-one', size = 20),
               plot.title.position = 'plot',
@@ -22,8 +22,7 @@ theme_nice = theme_set(theme_cowplot(14) +
               plot.caption.position = 'plot'
             ))
 
-
-theme_nice_45 = theme_set(theme_cowplot(14) + 
+theme_nice_45 = theme_set(theme_cowplot(16) + 
                          theme(
                            axis.text.x = element_text(angle = 45, vjust = 0.5),
                            plot.title = element_textbox_simple(family = 'patua-one', size = 20),
@@ -103,11 +102,12 @@ bgc %>%
   theme_cowplot(14) +
   labs(y = 'Number of BGCs',
        x = NULL, 
-       title = 'Distribution of BGCs',
+       # title = 'Distribution of BGCs',
        caption = '<i> Distribution of the different BGCs across the 746 
        bacterial strains in our collection </i>') +
   guides(fill = 'none') +
-  theme_nice
+  theme_cowplot(16) +
+  theme_nice 
 
 ggsave(here('exploration', 'BGC_numbers.pdf'), height = 8, width = 10)
 
@@ -118,7 +118,7 @@ bgc %>%
   count(type) %>% 
   ggplot(aes(x = fct_reorder(type, n,.desc = TRUE), y = n, fill = type)) +
   geom_bar(stat='identity', color = 'black') +
-  theme_cowplot(14) +
+  theme_cowplot(16) +
   labs(y = 'Number of BGCs',
        x = NULL) +
   guides(fill = 'none') +
@@ -135,11 +135,11 @@ bgc %>%
   count() %>% 
   ggplot(aes(n)) +
   geom_histogram(aes(y = ..density..) ,bins = 8, color = 'black',
-                 fill = 'dodgerblue2') +
+                 fill = 'grey50') +
   # geom_density( fill = 'darkslategray3', alpha = .5) +
   labs(x = 'Number of BGCs',
        y = 'Density') +
-  theme_cowplot(14)
+  theme_cowplot(19)
 
 ggsave(here('exploration', 'BGC_density.pdf'), height = 8, width = 10)
 
@@ -319,18 +319,21 @@ smiles.sum = smiles %>%
   group_by(genome, cluster) %>% 
   distinct(smiles, .keep_all = T) %>% 
   ungroup %>% 
-  count(smiles)
+  count(smiles) %>% 
+  arrange(desc(n))
 
 smiles.sum %>% 
-  ggplot(aes(x = fct_reorder(smiles,n), y = n)) +
+  write_csv(here('exploration', 'smiles_summary.csv'))
+
+smiles.sum %>% 
+  arrange(desc(n)) %>% 
+  mutate(num_name = seq(1,28,1),
+         num_name = as.factor(num_name)) %>% 
+  ggplot(aes(x = fct_reorder(num_name, n, .desc = T), y = n)) +
   geom_bar(stat='identity') +
-  theme_cowplot(12) +
-  labs(y = 'Number of times a compound appears',
-       x = NULL) +
-  theme(
-        axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) 
+  theme_cowplot(17) +
+  labs(y = 'Compound count',
+       x = 'Compound  (simplified)') 
 
 ggsave(here('exploration', 'smiles_numbers.pdf'), height = 8, width = 10)
 
@@ -351,10 +354,11 @@ bgc.meta %>%
   ggplot(aes(x = fct_reorder(type, n, .desc=TRUE), y = n, fill = type)) +
   geom_bar(stat='identity', color = 'black') +
   theme_cowplot(12) +
+  panel_border() +
   labs(y = 'Number of elements',
        x = NULL) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
-  facet_wrap(~phylogroup, ncol = 1)
+  facet_wrap(~phylogroup, ncol = 2)
 
 ggsave(here('exploration', 'BGC_by_phylogroup.pdf'), height = 8, width = 6)
 
@@ -372,15 +376,17 @@ bgc.meta %>%
   summarise(N = sum(prop)) %>% 
   ggplot(aes(x = fct_reorder(type, N, .desc=T), y = N, fill = type)) +
   geom_bar(stat='identity', color = 'black') +
-  theme_cowplot(14) +
-  labs(y = 'Proportion of total elements',
+  theme_cowplot(16) +
+  panel_border() +
+  labs(y = 'Proportion of elements',
        x = NULL) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
         strip.text.x = element_text(margin = margin(0.1,0,0.1,0, "cm"))) +
-  facet_wrap(~phylogroup, ncol = 1)
+  facet_wrap(~phylogroup, ncol = 1) +
+  guides(fill = 'none')
 
 
-ggsave(here('exploration', 'BGC_prop_by_phylogroup.pdf'), height = 8, width = 6)
+ggsave(here('exploration', 'BGC_prop_by_phylogroup.pdf'), height = 12, width = 6)
 
 
 
