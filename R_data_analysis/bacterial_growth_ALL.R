@@ -1,4 +1,9 @@
-# script to analyse, and merge, datasets from bacterial growth coming from AUS and ECOREF datasets
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# script to analyse, and merge, datasets from bacterial growth 
+# coming from AUS and ECOREF datasets
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # libraries ---------------------------------------------------------------
@@ -74,6 +79,63 @@ data %>%
   geom_boxplot()
 
 ggsave(here('summary', 'boxplot_bact_scores.pdf'))
+
+
+
+
+
+# bact pyseer -------------------------------------------------------------
+
+
+library(readxl)
+biofilm = read_excel("metf_induced_biofilm.xlsx")
+
+
+biofilm_strains = biofilm %>% pull(Strain)
+
+
+# all bacteria
+
+data %>% 
+  drop_na(Bact_score_mean) %>% 
+  # filter(Origin == 'ECOREF') %>% 
+  filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  mutate(fasta = case_when(is.na(fasta) ~ Strainname,
+                           TRUE ~ fasta)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, Bact_score_mean) %>% 
+  write_delim('bact_phenotype_no_biofilm.txt', delim = '\t')
+  
+
+
+data %>% 
+  drop_na(Bact_score_mean) %>% 
+  # filter(Origin == 'ECOREF') %>% 
+  # filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  mutate(fasta = case_when(is.na(fasta) ~ Strainname,
+                           TRUE ~ fasta)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, Bact_score_mean) %>% 
+  write_delim('bact_phenotype_ALL.txt', delim = '\t')
+
+
+
+# biofilm production
+
+data %>% 
+  drop_na(Bact_score_mean) %>% 
+  filter(Strain %in% biofilm_strains) %>% 
+  # filter(Origin == 'ECOREF') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  mutate(fasta = case_when(is.na(fasta) ~ Strainname,
+                           TRUE ~ fasta)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, Bact_score_mean) %>% 
+  write_delim('bact_phenotype_normal2superbio.txt', delim = '\t')
+
+
 
 
 
