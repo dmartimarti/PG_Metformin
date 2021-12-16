@@ -1,6 +1,9 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # script to analyse, and merge, datasets from worm acs-2 assays 
 # coming from AUS and ECOREF datasets
-
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # libraries ---------------------------------------------------------------
 
@@ -115,7 +118,7 @@ all_stats_metadata %>%
 
 
 
-# datasets for Pyseer -----------------------------------------------------
+# worm datasets for Pyseer -----------------------------------------------------
 
 
 
@@ -178,6 +181,50 @@ all_FC_metadata %>%
   drop_na(fasta) %>% 
   select(IDs = fasta, FC_worm = Mean_FC) %>% 
   write_delim('worm_phenotype_AUS.txt', delim = '\t')
+
+
+
+
+
+
+# biofilm producers (for Jen) ---------------------------------------------
+
+# Jen asked me to pull the strains that produce superbio and do pyseer to them
+
+library(readxl)
+biofilm = read_excel("metf_induced_biofilm.xlsx")
+
+
+biofilm_strains = biofilm %>% pull(Strain)
+
+# save all genomes 
+all_FC_metadata %>% 
+  filter(ID %in% biofilm_strains) %>% 
+  drop_na(Mean_FC) %>% 
+  # filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  mutate(fasta = case_when(is.na(fasta) ~ ID,
+                           TRUE ~ fasta)) %>% 
+  drop_na(fasta) %>% 
+  select(IDs = fasta, FC_worm = Mean_FC) %>% 
+  write_delim('worm_phenotype_normal2superbio.txt', delim = '\t')
+
+
+
+
+# save all genomes 
+all_FC_metadata %>% 
+  filter(ID %in% biofilm_strains) %>% 
+  drop_na(Mean_FC) %>% 
+  # filter(Annotation_50mM == 'normal') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  # drop_na(fasta) %>% 
+  # select(IDs = fasta, FC_worm = Mean_FC)  %>% 
+  view
+
+
+
+
 
 
 
