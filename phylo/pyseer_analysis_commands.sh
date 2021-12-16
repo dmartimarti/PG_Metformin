@@ -47,3 +47,30 @@ pyseer --phenotypes ./pyseer_output/original_tables/worm_phenotype_ALL_no_biofil
  pyseer --phenotypes ./pyseer_output/original_tables/worm_phenotype_ECOREF_no_biofilm.txt --lmm \
  --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
  --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/worm_phenotype_ECOREF_no_biofilm.tsv
+
+# Biofilm production for Jen
+ pyseer --phenotypes ./pyseer_output/original_tables/worm_phenotype_normal2superbio.txt --lmm \
+ --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/worm_phenotype_normal2superbio.tsv
+
+
+
+### for bacterial growth 
+
+# copy files with genome names and worm phenotype
+cp /mnt/d/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/bacterial_growth/bact_phenotype_*.txt ./pyseer_output/original_tables/bact
+
+pyseer --phenotypes ./pyseer_output/original_tables/bact/bact_phenotype_ALL.txt --lmm \
+ --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/bact/bact_phenotype_ALL.tsv
+
+
+pyseer --phenotypes ./pyseer_output/original_tables/bact/bact_phenotype_no_biofilm.txt --lmm \
+ --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/bact/bact_phenotype_no_biofilm.tsv
+
+
+pyseer --phenotypes ./pyseer_output/original_tables/bact/bact_phenotype_normal2superbio.txt --lmm \
+ --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/bact/bact_phenotype_normal2superbio.tsv
+
