@@ -1,3 +1,6 @@
+# This script analyses the results from pyseer and plots them as 
+# Manhattan plots along the population abundance per gene
+
 
 library(tidyverse) # master library to deal with data frames
 library(readxl) # read xlsx or xls files
@@ -115,6 +118,11 @@ ecoref_nobio = read_delim("pyseer_output/results/worm_phenotype_ECOREF_no_biofil
 
 ecoref_worm = read_delim("pyseer_output/results/worm_phenotype_ECOREF.tsv", 
                        "\t", escape_double = FALSE, trim_ws = TRUE)
+
+
+# biofilm producers
+biofilm_prod = read_delim("pyseer_output/results/worm_phenotype_normal2superbio.tsv", 
+                          "\t", escape_double = FALSE, trim_ws = TRUE)
 
 
 
@@ -273,6 +281,13 @@ dev.copy2pdf(device = cairo_pdf,
              height = 10, width = 14, useDingbats = FALSE)
 
 
+# super bio producers
+
+manhplot.lrt(biofilm_prod, limit = 3, unk = F)
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'manhattan_pyseer_lrt_normal2superbio.pdf'),
+             height = 10, width = 14, useDingbats = FALSE)
 
 ### pval ####
 # ALL
@@ -320,6 +335,81 @@ manhplot.pval(ecoref_worm, limit = 6, unk = F)
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'manhattan_pyseer_pval_ECOREF_worm.pdf'),
              height = 10, width = 14, useDingbats = FALSE)
+
+
+# super bio producers
+
+manhplot.pval(biofilm_prod, limit = 6, unk = F)
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'manhattan_pyseer_pval_normal2superbio.pdf'),
+             height = 10, width = 14, useDingbats = FALSE)
+
+
+
+
+
+
+# pyseer bact ------------------------------------------------------------------
+
+
+### read data ####
+
+# ALL no bio
+all_nobio_bact = read_delim("pyseer_output/results/bact/bact_phenotype_no_biofilm.tsv", 
+                         "\t", escape_double = FALSE, trim_ws = TRUE)
+
+# ALL
+all_bact = read_delim("pyseer_output/results/bact/bact_phenotype_ALL.tsv", 
+                            "\t", escape_double = FALSE, trim_ws = TRUE)
+
+
+# superbio producers
+supebio_bact = read_delim("pyseer_output/results/bact/bact_phenotype_normal2superbio.tsv", 
+                      "\t", escape_double = FALSE, trim_ws = TRUE)
+
+
+
+#### lrt plot ####
+
+
+# super bio producers
+
+manhplot.lrt(supebio_bact, limit = 3, unk = F)
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'manhattan_pyseer_BACT_lrt_normal2superbio.pdf'),
+             height = 10, width = 14, useDingbats = FALSE)
+
+
+
+##### pval plot ####
+
+# super bio producers
+
+manhplot.pval(supebio_bact, limit = 6, unk = F)
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'manhattan_pyseer_BACT_pval_normal2superbio.pdf'),
+             height = 10, width = 14, useDingbats = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
