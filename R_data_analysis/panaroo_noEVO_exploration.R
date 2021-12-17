@@ -14,7 +14,7 @@ library(ggrepel)
 library(patchwork)
 library(cowplot)
 
-# theme_set(theme_light())
+theme_set(theme_cowplot(14))
 
 
 metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
@@ -403,18 +403,60 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
+# Gene families -----------------------------------------------------------
+
+
+
+# load the gene presence matrix
+
+gene_pa =read_csv("gene_presence_absence.csv")
+
+# names(gene_pa)
+
+gene_pa = gene_pa %>% 
+  select(-Annotation, -`Non-unique Gene name`, gene = Gene, everything())
+
+gene_bin = gene_pa %>% 
+  select(-gene) %>% 
+  mutate_all(~replace(.,!is.na(.), 1)) %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>% 
+  # mutate_all(~replace(., is.character(.), 1)) %>% 
+  mutate_all(~as.integer(.)) 
+
+genes = gene_pa$gene
+
+
+rw_sums = rowSums(gene_bin)
+
+
+gene_bin = gene_bin %>% 
+  mutate(total = rw_sums, .before = `100`) %>% 
+  mutate(gene = genes, .before = total)
+
+
+
+gene_bin %>% 
+  ggplot(aes(x = total)) +
+  geom_histogram(position = 'identity',
+                 bins=70,
+                 fill = 'grey60') +
+  labs(y = 'Gene count',
+       x = 'Number of genomes with a specific gene')
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'gene_counts_per_genome.pdf'),
+             height = 8, width = 10, useDingbats = FALSE)
 
 
 
 
 
+cosa =str_split(c('clpA_1~~~clpA_2~~~clpA', 'gltA'), '~~~')
 
 
-
-
-
-
-
+for(element in cosa){
+  print(element)
+}
 
 
 
