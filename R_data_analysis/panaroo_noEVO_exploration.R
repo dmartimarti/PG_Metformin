@@ -451,12 +451,147 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
-cosa =str_split(c('clpA_1~~~clpA_2~~~clpA', 'gltA'), '~~~')
 
 
-for(element in cosa){
-  print(element)
+
+# how many genes are included in each gene family
+
+genes_split = str_split(genes, '~~~')
+
+gene_fam_lengths = c()
+for(element in genes_split){
+  # print(length(element))
+  gene_fam_lengths = c(gene_fam_lengths ,length(element))
 }
+
+gene_fam_lengths
+
+
+gene_fam_df = tibble(gene = genes, lengths = gene_fam_lengths)
+
+gene_fam_df %>% 
+  arrange(desc(lengths))
+
+
+gene_fam_df %>% 
+  filter(lengths > 1) %>% 
+  ggplot(aes(x = lengths)) +
+  geom_histogram(
+    stat = 'count'
+    ) +
+  # scale_x_discrete(breaks=c(seq(2,17,1))) +
+  scale_x_continuous(limits=c(1, 18),
+                     breaks=c(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17)) +
+  labs(
+    x = 'Number of genes in family',
+    y = 'Count'
+  )
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'gene_per_genefamily.pdf'),
+             height = 8, width = 10, useDingbats = FALSE)
+
+
+
+
+
+gene_fam_df %>% 
+  # filter(lengths > 1) %>% 
+  ggplot(aes(x = lengths)) +
+  geom_histogram(
+    stat = 'count'
+  ) +
+  # scale_x_discrete(breaks=c(seq(2,17,1))) +
+  # scale_x_continuous(limits=c(0, 18),
+  #                    breaks=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17)) +
+  labs(
+    x = 'Number of genes in family',
+    y = 'Count'
+  ) + 
+  ggforce::facet_zoom(x = lengths > 2, 
+                      xlim = c(2.2,17),
+                      ylim = c(0,2300))
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'gene_per_genefamily_zoom.pdf'),
+             height = 8, width = 13, useDingbats = FALSE)
+
+
+
+
+### what are the genes that belong to the shell 
+
+
+gene_bin %>% 
+  select(gene, total) %>% 
+  mutate(per = total / 750) %>% 
+  filter(per < 0.95 & per >= 0.15) %>% 
+  write_csv('shell_genes.csv')
+
+
+
+
+## is there any correlation between genes within families and gene presence? 
+
+gene_fam_df = gene_fam_df %>% 
+  left_join(gene_bin %>% select(gene, total)) %>% 
+  mutate(per = total / 750) %>% 
+  mutate(class = case_when( per >= 0.99 ~ 'core',
+                            per < 0.99 & per >= 0.95 ~ 'soft_core',
+                            per < 0.95 & per >= 0.15 ~ 'shell',
+                            per < 0.15 ~ 'cloud'))
+
+
+
+
+gene_fam_df %>%
+  ggplot(aes(x = per, y = lengths)) +
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  ggpubr::stat_cor(
+    p.accuracy = 0.001, r.accuracy = 0.01
+  )
+  labs(
+    x = 'Gene presence in pangenome',
+    y = 'Genes within a gene family'
+  ) +
+  theme_cowplot(14)
+
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'genePA_length_corr.pdf'),
+             height = 8, width = 13, useDingbats = FALSE)
+
+
+gene_fam_df %>%
+  filter(class != 'core') %>%
+  ggplot(aes(x = per, y = lengths, color = class)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = 'lm') +
+  ggpubr::stat_cor(
+    p.accuracy = 0.001, r.accuracy = 0.01,
+    label.x = 0.75)
+  labs(
+    x = 'Gene presence in pangenome',
+    y = 'Genes within a gene family'
+  ) +
+  theme_cowplot(14) + 
+  facet_wrap(~class, scales = 'free_x')
+
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'genePA_length_corr_class.pdf'),
+             height = 8, width = 13, useDingbats = FALSE)
+
+
+
+
+
+gene_fam_df %>% 
+  group_by(class) %>% 
+  count()
+
+
 
 
 
