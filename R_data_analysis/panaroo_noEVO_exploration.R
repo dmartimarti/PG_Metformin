@@ -17,8 +17,8 @@ library(cowplot)
 theme_set(theme_cowplot(14))
 
 
-metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
-                      sheet = "metadata")
+# metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
+#                       sheet = "metadata")
 
 
 # phylogroups -------------------------------------------------------------
@@ -550,7 +550,7 @@ gene_fam_df %>%
   geom_smooth(method = 'lm') +
   ggpubr::stat_cor(
     p.accuracy = 0.001, r.accuracy = 0.01
-  )
+  ) +
   labs(
     x = 'Gene presence in pangenome',
     y = 'Genes within a gene family'
@@ -566,11 +566,10 @@ dev.copy2pdf(device = cairo_pdf,
 gene_fam_df %>%
   filter(class != 'core') %>%
   ggplot(aes(x = per, y = lengths, color = class)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = 'lm') +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = 'lm', color = 'black') +
   ggpubr::stat_cor(
-    p.accuracy = 0.001, r.accuracy = 0.01,
-    label.x = 0.75)
+    p.accuracy = 0.001, r.accuracy = 0.01) +
   labs(
     x = 'Gene presence in pangenome',
     y = 'Genes within a gene family'
@@ -588,12 +587,80 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 gene_fam_df %>% 
+  mutate(known = case_when(str_detect(gene, 'group') == TRUE ~ 'Unknown',
+                           TRUE ~ 'Known')) %>% 
+  group_by(known) %>% 
+  count() %>% 
+  ggplot(aes(x=known, y = n)) +
+  geom_col(aes(fill = known), color = 'black') +
+  guides(fill = 'none') + 
+  labs(
+    x = 'Gene source',
+    y = 'Number of gene families'
+  ) + 
+  theme_cowplot(17)
+
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'known_unknown_genes.pdf'),
+             height = 10, width = 7, useDingbats = FALSE)
+
+
+
+
+gene_fam_df %>% 
+  mutate(known = case_when(str_detect(gene, 'group') == TRUE ~ 'Unknown',
+                           TRUE ~ 'Known'),
+         class = as_factor(class),
+         known = as_factor(known)) %>% 
+  # group_by(known, class) %>% 
+  # count() %>% 
+  ggplot(aes(x = known, fill = class)) +
+  geom_histogram(stat = 'count', 
+                 position = 'dodge',
+                 color = 'black') + 
+  labs(
+    x = 'Gene source',
+    y = 'Number of gene families'
+  ) + 
+  theme_cowplot(17)
+
+
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'known_unknown_genes_perClass.pdf'),
+             height = 8, width = 9, useDingbats = FALSE)
+
+
+
+# proportion of genes known or unknown by class
+gene_fam_df %>% 
+  mutate(known = case_when(str_detect(gene, 'group') == TRUE ~ 'Unknown',
+                           TRUE ~ 'Known'),
+         class = as_factor(class),
+         known = as_factor(known)) %>% 
+  group_by(class, known) %>% 
+  count() %>% 
   group_by(class) %>% 
-  count()
+  mutate(tot = sum(n)) %>% 
+  ungroup %>% 
+  mutate(prop = (n / tot) * 100) %>% 
+  ggplot(aes(x = known, y = prop, fill = class)) +
+  geom_col(color = 'black',
+           position = 'dodge') +
+  geom_text(aes(label = round(prop,2)), 
+            position = position_dodge(width = 0.9),
+            vjust=-0.25) + 
+  ylim(0,100) +
+  # guides(fill = 'none') + 
+  labs(
+    x = 'Gene source',
+    y = 'Number of gene families'
+  ) + 
+  theme_cowplot(17)
 
-
-
-
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'known_unknown_genes_perClass_prop.pdf'),
+             height = 8, width = 9, useDingbats = FALSE)
 
 
 
