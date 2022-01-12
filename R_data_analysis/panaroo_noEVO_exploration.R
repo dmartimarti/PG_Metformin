@@ -13,6 +13,7 @@ library(openxlsx)
 library(ggrepel)
 library(patchwork)
 library(cowplot)
+library(glue)
 
 theme_set(theme_cowplot(14))
 
@@ -348,6 +349,85 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
+### extract genes for enrichment with String DB
+
+# helper function to extract genes from pyseer
+get_genes = function(pyseer_out = all_nobio, 
+                     mode = 'lrt', # can be either pval or lrt
+                     thres = 3 # -log10 threshold to filter
+                     ){
+  
+  if (mode == 'lrt'){
+    temp = pyseer_out %>% 
+      mutate(log_lrt = -log10(`lrt-pvalue`),
+             log_pval = -log10(`filter-pvalue`)) %>% 
+      filter(log_lrt > thres) %>% 
+      filter(!str_detect(variant, 'group')) %>% 
+      select(variant) %>% 
+      mutate(variant = str_split(variant, '~~~')) %>% 
+      unnest(variant) %>% 
+      mutate(variant = case_when(str_detect(variant, '_') ~ str_sub(variant, end = -3),
+                                 TRUE ~ variant),
+             variant = str_replace(variant, '\\d','')) %>% 
+      distinct(variant)
+  } else if (mode == 'pval') {
+    temp = pyseer_out %>% 
+      mutate(log_lrt = -log10(`lrt-pvalue`),
+             log_pval = -log10(`filter-pvalue`)) %>% 
+      filter(log_pval > thres) %>% 
+      filter(!str_detect(variant, 'group')) %>% 
+      select(variant) %>% 
+      mutate(variant = str_split(variant, '~~~')) %>% 
+      unnest(variant) %>% 
+      mutate(variant = case_when(str_detect(variant, '_') ~ str_sub(variant, end = -3),
+                                 TRUE ~ variant),
+             variant = str_replace(variant, '\\d','')) %>% 
+      distinct(variant)
+  } else {
+    cat("You need to introduce lrt or pval as a mode! \n")
+  }
+  
+  return(temp)
+
+}
+
+
+#### save datasets ####
+
+pval_thres = 6
+lrt_thres = 3
+
+# ALL
+get_genes(all_nobio, mode = 'lrt', thres = lrt_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('all_nobio_lrt_{lrt_thres}.txt')), 
+               col_names = F)
+get_genes(all_nobio, mode = 'pval', thres = pval_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('all_nobio_pval_{pval_thres}.txt')), 
+               col_names = F)
+
+
+get_genes(all_worm, mode = 'lrt', thres = lrt_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('all_worm_lrt_{lrt_thres}.txt')), 
+               col_names = F)
+get_genes(all_worm, mode = 'pval', thres = pval_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('all_worm_pval_{pval_thres}.txt')), 
+               col_names = F)
+
+# AUS
+get_genes(aus_nobio, mode = 'lrt', thres = lrt_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('aus_nobio_lrt_{lrt_thres}.txt')), 
+               col_names = F)
+get_genes(aus_nobio, mode = 'pval', thres = pval_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('aus_nobio_pval_{pval_thres}.txt')), 
+               col_names = F)
+
+
+get_genes(aus_worm, mode = 'lrt', thres = lrt_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('aus_worm_lrt_{lrt_thres}.txt')), 
+               col_names = F)
+get_genes(aus_worm, mode = 'pval', thres = pval_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('aus_worm_pval_{pval_thres}.txt')), 
+               col_names = F)
 
 
 # pyseer bact ------------------------------------------------------------------
@@ -661,6 +741,37 @@ gene_fam_df %>%
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'known_unknown_genes_perClass_prop.pdf'),
              height = 8, width = 9, useDingbats = FALSE)
+
+
+
+
+
+
+
+gene_fam_df %>% 
+  filter(str_detect(gene, 'bcs'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
