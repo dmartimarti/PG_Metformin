@@ -15,12 +15,12 @@ library(broom)
 library(here)
 library(openxlsx)
 library(colorspace)
+library(ggtext)
+
+# options(width = 170)
 
 
-options(width = 220)
-
-
-### Load data
+# Load data ####
 
 info = read_csv('original_data/PM1to5/Biolog_metabolites.csv',quote = "\"")
 
@@ -100,11 +100,11 @@ bacall = bac.byrep %>%
 
 
 
-###
-### PCA plots
-###
+# # # # # # # # #
+# PCA plots ####
+# # # # # # # # #
 
-#Generate infor tables which describes samples
+# Generate infor tables which describes samples
 bioinfo = data.b %>% 
   group_by(SampleID, Sample, Strain, Type) %>%
   summarise %>%
@@ -173,9 +173,9 @@ ggsave(file = here('summary','PCA_OP50_rcdA_PM1_2.pdf', sep = ''),
 
 
 
-##################
-#### Heatmaps ####
-##################
+# # # # # # # # # #
+# Heatmaps ####
+# # # # # # # # # #
 
 
 hinfo <- data.b %>%
@@ -371,9 +371,10 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
-#####################
-### scatter plots ###
-#####################
+# # # # # # # # # # #
+# scatter plots #####
+# # # # # # # # # # #
+
 
 # op50
 
@@ -385,9 +386,6 @@ cosa = data.b %>% filter(Strain == 'OP50') %>%
 
 
 
-
-
-####
 # linear modeling
   
 contrasts <- read.contrasts('!Contrasts.xlsx') # This table describes comparisons made in data
@@ -462,9 +460,13 @@ data.b %>%
 results %>% filter(MetaboliteU == met)
 
 
-#######################################################
-### Enrichment analysis of metabolites and pathways ###
-#######################################################
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Enrichment analysis of metabolites and pathways #####
+# # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 # load other helper files for KEGG and EcoCyc enrichment
 # KEGG mappings
@@ -754,6 +756,164 @@ df %>%
 dev.copy2pdf(device = cairo_pdf,
              file =here('Summary', 'Enrich_metab_class_bacteria.pdf'),
              width = 6, height = 8, useDingbats = FALSE)
+
+
+
+
+
+
+
+# growth data -------------------------------------------------------------
+
+time.data = read_csv('original_data/PM1to5/Output/Timeseries.csv', quote = "\"") %>%
+  filter(Data == '750nm_f') %>%
+  gather(Time_s, OD, matches('\\d')) %>%
+  drop_na(Time_s) %>% 
+  mutate(Strain = as.character(Strain), # Change strain namings
+         # ReplicateB = paste0('B', as.character(Replicate)), #Generate replicate ID which indicate that it's data for bacteria
+         Type = ifelse(Type == 'Control','C','T'),
+         Sample = paste(Strain, Type, sep = '_'),
+         Type = factor(Type,
+                       levels = c('C', 'T'),
+                       labels = c('Control', 'Treatment')),
+         Time_s = as.numeric(Time_s),
+         Time_h = Time_s/3600,
+         Row = str_match_all(Well,'[:digit:]{1,}'), #Get plate row names from well name. 
+         Col = str_match_all(Well,'[:alpha:]{1,}'), #Get plate column names from well name
+         Row = factor(Row, levels = 1:12), #Make them categorical variable with set order them
+         Col = factor(Col, levels = LETTERS[1:8])) %>%
+  select(c(-File, -Data, -Reader)) %>%
+  # rename(Strain = Str, Replicate = Replicate_y) %>%
+  mutate_at(c('Well', 'Strain', 'Metformin_mM'), as.factor)
+
+
+
+
+# Generate summary statistics for each group
+bac.sum = data.b %>%
+  group_by(Strain, Plate, Replicate, Group) %>%
+  gather(Measure, Value, AUC_raw, AUC) %>%
+  group_by(Measure, Strain, Type, Plate, Well, Index, Metabolite, MetaboliteU) %>% #Work on subsets based on selected grouping variables
+  summarise(Mean = mean(Value, na.rm = TRUE), # Do selected summary over group items - replicates, ignore missing values
+            SD = sd(Value, na.rm = TRUE),
+            SE = SD/sqrt(n())) %>% # standard error of the mean
+  ungroup %>%
+  mutate(PE = Mean+SE,
+         NE = Mean-SE)
+
+
+tsum = time.data %>%
+  group_by(Plate, Metformin_mM, Strain, Type, Well, Index, Metabolite, MetaboliteU, Time_h) %>%
+  summarise(Mean = mean(OD), SD = sd(OD), SE = SD/sqrt(length(OD))) %>%
+  ungroup 
+
+
+tsum = tsum %>% filter(Metformin_mM == 0)
+
+
+## plotting all temporal series in a grid
+lvls = naturalsort::naturalsort(unique(tsum$Well))
+
+tsum %>%
+  filter(Well == 'A1') %>%
+  ggplot(aes(x = Time_h, y = Mean, fill = Strain, color = Strain)) +
+  geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.4) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, 24, by = 6)) +
+  ylab("OD") +
+  xlab("Time, h") +
+  facet_wrap(vars(Plate)) +
+  scale_colour_manual(values = c('#EDBD24', '#2E49EB')) +
+  scale_fill_manual(values = c('#EDBD24', '#2E49EB')) +
+  # theme(panel.grid.major = element_blank(),
+  #       panel.grid.minor = element_blank(),
+  #       panel.background = element_rect(fill = "white", colour = "grey50")) 
+  cowplot::theme_cowplot(15)
+
+
+
+ggsave(file = paste(odir,'/Bacterial_growth.pdf',sep = ''),
+       width = 80, height = 80, units = 'mm', scale = 2, device = 'pdf')
+
+
+
+
+
+dir.create(here('summary/individual_plots'))
+
+
+metabs = tsum %>% 
+  unite(metab_plate, c(MetaboliteU, Plate), sep = ' - ') %>% 
+  distinct(metab_plate) %>% 
+  pull(metab_plate)
+
+
+  
+tsum = tsum %>% 
+  unite(metab_plate, c(MetaboliteU, Plate), sep = ' - ')
+
+tsum2 = tsum %>% 
+  mutate(Strain = case_when(Strain == 'OP50' ~ "OP50 WT",
+                            Strain == 'rcda' ~ "OP50 &Delta;<i>rcdA</i>"))
+
+
+
+
+tsum2 %>%
+  filter(metab_plate == met) %>%
+  ggplot(aes(x = Time_h, y = Mean, fill = Strain, color = Strain)) +
+  geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.4) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, 24, by = 6)) +
+  ylab("OD") +
+  xlab("Time, h") +
+  facet_wrap(vars(metab_plate)) +
+  scale_colour_manual(values = c('#EDBD24', '#2E49EB')) +
+  scale_fill_manual(values = c('#EDBD24', '#2E49EB')) +
+  cowplot::theme_cowplot(15) +
+  theme(
+    legend.text = element_markdown()
+  )
+
+for (met in metabs[1:10]){
+
+  tsum2 %>%
+    filter(metab_plate == met) %>%
+    ggplot(aes(x = Time_h, y = Mean, fill = Strain, color = Strain)) +
+    geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.4) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(0, 24, by = 6)) +
+    ylab("OD") +
+    xlab("Time, h") +
+    facet_wrap(vars(metab_plate)) +
+    scale_colour_manual(values = c('#EDBD24', '#2E49EB')) +
+    scale_fill_manual(values = c('#EDBD24', '#2E49EB')) +
+    cowplot::theme_cowplot(15) +
+    theme(
+      legend.text = element_markdown(family = 'Arial')
+    )
+  
+  ggsave(file = here('summary/individual_plots', glue::glue('{met}_growth.pdf')),
+         width = 8, height = 8)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
