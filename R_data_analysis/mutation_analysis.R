@@ -4,10 +4,10 @@ library(here)
 library(cowplot)
 
 theme_set(theme_classic() +
-            theme(axis.text.x = element_text(size = 13, color = 'black'),
-                  axis.text.y = element_text(size = 13, color = 'black'),
-                  axis.title.x = element_text(face = "bold", size = 13, color = 'black'),
-                  axis.title.y = element_text(face = "bold", size = 13, color = 'black')))
+            theme(axis.text.x = element_text(size = 15, color = 'black'),
+                  axis.text.y = element_text(size = 15, color = 'black'),
+                  axis.title.x = element_text(face = "bold", size = 15, color = 'black'),
+                  axis.title.y = element_text(face = "bold", size = 15, color = 'black')))
 # Read data ---------------------------------------------------------------
 
 
@@ -165,8 +165,8 @@ muts_plot = mp_muts %>%
                  fill = 'dodgerblue3') +
   xlim(0,178) +
   #facet_wrap(~GENE, scales = 'free_y') +
-  labs(x = 'Number of SNPs',
-       y = 'Position in the protein') +
+  labs(y = 'Number of SNPs',
+       x = 'Position in the protein') +
   coord_cartesian(ylim = c(-0, 2), clip = "off")
 
 doms_plot = ggplot(doms, aes(y = Domain)) +
