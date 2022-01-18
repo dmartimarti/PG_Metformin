@@ -843,39 +843,24 @@ dir.create(here('summary/individual_plots'))
 
 
 metabs = tsum %>% 
-  unite(metab_plate, c(MetaboliteU, Plate), sep = ' - ') %>% 
+  unite(metab_plate, c(MetaboliteU, Plate), sep = ' - ') %>%
   distinct(metab_plate) %>% 
   pull(metab_plate)
 
 
   
 tsum = tsum %>% 
-  unite(metab_plate, c(MetaboliteU, Plate), sep = ' - ')
+  unite(metab_plate, c(MetaboliteU, Plate), sep = ' - ', remove = F)
 
 tsum2 = tsum %>% 
   mutate(Strain = case_when(Strain == 'OP50' ~ "OP50 WT",
-                            Strain == 'rcda' ~ "OP50 &Delta;<i>rcdA</i>"))
+                            Strain == 'rcda' ~ "OP50 &Delta;<i>rcdA</i>"),
+         Strain = factor(Strain, levels = c("OP50 WT", "OP50 &Delta;<i>rcdA</i>" )))
 
 
 
 
-tsum2 %>%
-  filter(metab_plate == met) %>%
-  ggplot(aes(x = Time_h, y = Mean, fill = Strain, color = Strain)) +
-  geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.4) +
-  geom_line() +
-  scale_x_continuous(breaks = seq(0, 24, by = 6)) +
-  ylab("OD") +
-  xlab("Time, h") +
-  facet_wrap(vars(metab_plate)) +
-  scale_colour_manual(values = c('#EDBD24', '#2E49EB')) +
-  scale_fill_manual(values = c('#EDBD24', '#2E49EB')) +
-  cowplot::theme_cowplot(15) +
-  theme(
-    legend.text = element_markdown()
-  )
-
-for (met in metabs[1:10]){
+for (met in metabs){
 
   tsum2 %>%
     filter(metab_plate == met) %>%
@@ -886,22 +871,51 @@ for (met in metabs[1:10]){
     ylab("OD") +
     xlab("Time, h") +
     facet_wrap(vars(metab_plate)) +
-    scale_colour_manual(values = c('#EDBD24', '#2E49EB')) +
-    scale_fill_manual(values = c('#EDBD24', '#2E49EB')) +
+    scale_colour_manual(values = c('#2E49EB', '#EDBD24')) +
+    scale_fill_manual(values = c('#2E49EB', '#EDBD24')) +
     cowplot::theme_cowplot(15) +
     theme(
       legend.text = element_markdown(family = 'Arial')
     )
   
   ggsave(file = here('summary/individual_plots', glue::glue('{met}_growth.pdf')),
-         width = 8, height = 8)
+         width = 8, height = 8, device = cairo_pdf)
 
 }
 
 
 
+plates = tsum %>% 
+  distinct(Plate) %>% 
+  pull(Plate)
 
 
+# dir.create(here('summary/individual_plates'))
+
+
+for (plate in plates){
+  
+  tsum2 %>%
+    filter(Plate == plate) %>%
+    ggplot(aes(x = Time_h, y = Mean, fill = Strain, color = Strain)) +
+    geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.4) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(0, 24, by = 6)) +
+    ylab("OD") +
+    xlab("Time, h") +
+    facet_wrap(vars(MetaboliteU), nrow = 12, ncol = 12) +
+    scale_colour_manual(values = c('#2E49EB', '#EDBD24')) +
+    scale_fill_manual(values = c('#2E49EB', '#EDBD24')) +
+    cowplot::theme_cowplot(15) +
+    theme(
+      legend.text = element_markdown()
+    )
+  
+  
+  ggsave(file = here('summary/individual_plates', glue::glue('{plate}_growth.pdf')),
+         width = 18, height = 18, device = cairo_pdf)
+  
+}
 
 
 
