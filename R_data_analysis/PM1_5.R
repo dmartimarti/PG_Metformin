@@ -858,6 +858,10 @@ tsum2 = tsum %>%
          Strain = factor(Strain, levels = c("OP50 WT", "OP50 &Delta;<i>rcdA</i>" )))
 
 
+tsum2 %>% 
+  mutate(metab_plate = case_when(str_detect(metab_plate, '_Nutritional supplement')))
+
+
 
 
 for (met in metabs){
@@ -893,9 +897,12 @@ plates = tsum %>%
 # dir.create(here('summary/individual_plates'))
 
 
+
 for (plate in plates){
   
   tsum2 %>%
+    mutate(MetaboliteU = str_wrap(MetaboliteU, width = 15)) %>% 
+    mutate(MetaboliteU = str_replace_all(MetaboliteU, '_',' ')) %>% 
     filter(Plate == plate) %>%
     ggplot(aes(x = Time_h, y = Mean, fill = Strain, color = Strain)) +
     geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), color = NA, alpha = 0.4) +
@@ -913,7 +920,7 @@ for (plate in plates){
   
   
   ggsave(file = here('summary/individual_plates', glue::glue('{plate}_growth.pdf')),
-         width = 18, height = 18, device = cairo_pdf)
+         width = 22, height = 21, device = cairo_pdf)
   
 }
 
