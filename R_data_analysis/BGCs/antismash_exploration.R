@@ -322,6 +322,10 @@ smiles.sum = smiles %>%
   count(smiles) %>% 
   arrange(desc(n))
 
+smiles.sum = smiles.sum %>% 
+  left_join(smiles %>% select(smiles, mol_weight)) %>% 
+  distinct(smiles, .keep_all = T)
+
 smiles.sum %>% 
   write_csv(here('exploration', 'smiles_summary.csv'))
 

@@ -16,6 +16,8 @@ library(here)
 library(openxlsx)
 library(colorspace)
 library(ggtext)
+library(ggpubr)
+library(cowplot)
 
 # options(width = 170)
 
@@ -931,7 +933,7 @@ for (plate in plates){
 
 # read the data table with gene info
 
-ecocyc = read_csv("EcoCyc_genes_pathways.csv")
+# ecocyc = read_csv("EcoCyc_genes_pathways.csv")
 
 ##### Hypergeometric function ########
 
@@ -980,19 +982,56 @@ enrich = function(gene, db){
 
 
 
-results %>% 
+EC_db = EC_mappings %>% 
+  select(EcoCyc_Instances, EcoCyc_Classes) %>% 
+  separate_rows(EcoCyc_Classes, sep = ';')
+
+
+# BE AWARE OF THE PVALS AND THRESHOLDS, THEY ARE A BIT RELAXED NOW
+
+low_nutr = results %>% 
   filter(Description == 'rcdA difference from OP50 in control') %>% 
-  filter(FDR < 0.05, 
+  filter(p.value < 0.05, 
          logFC < 0) %>% 
   pull(EcoCycID)
 
 
-# calculate enrichment for the different sets
-genes = group_1$Genes
-g1.enrich = enrich(genes, db = ecocyc) %>% mutate(direction = 'group_1')
+high_nutr = results %>% 
+  filter(Description == 'rcdA difference from OP50 in control') %>% 
+  filter(p.value < 0.05, 
+         logFC > 0) %>% 
+  pull(EcoCycID)
 
 
+low.enrich = enrich(low_nutr, db = EC_db) %>% mutate(grouping = 'Lower')
+high.enrich = enrich(high_nutr, db = EC_db) %>% mutate(grouping = 'Higher')
 
+low.enrich %>% 
+  bind_rows(high.enrich) %>%
+  filter(pval <= 0.05) %>% 
+  mutate(logpval = -log(pval)) %>%
+  mutate(categories = str_sub(categories, start = 2, end = -2)) %>% 
+  mutate(categories = str_wrap(categories, width = 25)) %>%  
+  ggplot(aes(x = grouping,y = categories, 
+             size = logpval, color =  p.stars)) +
+  geom_point() +
+  scale_colour_manual(values = c('#F5A032', '#FA2419')) +
+  labs(x = 'Growth capacity in &Delta;*rcdA* vs WT',
+       y = 'Nutrient class',
+       color = '-log<sub>10</sub>(P-value)') +
+  scale_y_discrete(limits=rev) +
+  guides(size = 'none') +
+  theme_cowplot(15) +
+    theme(
+      legend.title = element_markdown(),
+      legend.text = element_markdown(),
+      axis.title.x = element_markdown(),
+      axis.title.y = element_markdown()
+    )
+
+
+ggsave(file = here('summary', 'EcoCyc_metab_enrich_rcdA_vs_OP50.pdf'),
+       width = 9, height = 8, device = cairo_pdf)
 
 
 
