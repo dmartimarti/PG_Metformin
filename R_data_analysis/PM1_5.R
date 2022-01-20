@@ -927,6 +927,69 @@ for (plate in plates){
 
 
 
+# enrichment_2 ------------------------------------------------------------
+
+# read the data table with gene info
+
+ecocyc = read_csv("EcoCyc_genes_pathways.csv")
+
+##### Hypergeometric function ########
+
+
+# hypergeometric test function
+
+enrich = function(gene, db){
+  # initiate variables
+  pval = c()
+  m_total = c()
+  x_total = c()
+  k_total = c()
+  gene_in_cat = c()
+  db = as.data.frame(db)
+  cats = unique(db[,2])
+  
+  for (cat in cats){
+    subcat = db[db[,2] == cat,]
+    N = (db %>% distinct(.[,1]) %>% count())$n
+    m = dim(subcat)[1]
+    n = N - m
+    x = sum(gene %in% subcat[,1])
+    k = sum(gene %in% db[,1]) # genes with at least 1 annotation!
+    p = phyper(q=x-1, m=m, n=n, k=k, lower.tail=FALSE)
+    
+    # save variables
+    m_total = c(m_total, m)
+    x_total = c(x_total, x)
+    k_total = c(k_total, k)
+    gene_in_cat = c(gene_in_cat)
+    pval = c(pval, p)
+  }
+  
+  # build the table
+  table = tibble(categories = cats, N = N, elm_in_cat = m_total, gene_in_cat = x_total, k_tot = k, pval = pval) %>% 
+    mutate(
+      p.stars = gtools::stars.pval(pval),
+      fdr = p.adjust(pval, method = 'fdr'),
+      fdr.stars = gtools::stars.pval(fdr)
+    ) %>% 
+    arrange(pval)
+  
+  return(table)
+  
+}
+
+
+
+results %>% 
+  filter(Description == 'rcdA difference from OP50 in control') %>% 
+  filter(FDR < 0.05, 
+         logFC < 0) %>% 
+  pull(EcoCycID)
+
+
+# calculate enrichment for the different sets
+genes = group_1$Genes
+g1.enrich = enrich(genes, db = ecocyc) %>% mutate(direction = 'group_1')
 
 
 
