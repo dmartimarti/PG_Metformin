@@ -268,6 +268,7 @@ all_FC_metadata %>%
   mutate(Path = paste0('/rds/general/user/dmarti14/home/pangenome_study/complete/assemblies/no_evo/',fasta)) %>% 
   filter(Annotation_0mM == 'normal') %>%
   filter(!(phylogroup %in% removals)) %>% 
+  filter(Discard == 'No') %>% 
   mutate(fasta = str_sub(fasta,1, -7)) %>%
   mutate(fasta = case_when(is.na(fasta) ~ ID,
                            TRUE ~ fasta)) %>%
@@ -279,4 +280,10 @@ all_FC_metadata %>%
   distinct(ID, .keep_all = TRUE) %>% 
   write_delim('dbgwas_biofilm_PG.txt', delim = '\t')
   
+
+
+
+
+
+
 
