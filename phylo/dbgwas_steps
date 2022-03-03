@@ -1,0 +1,67 @@
+# Steps to get the right tables to make DBGWAS work
+
+####
+## 1. go to the computer location where the worm/bacteria info is
+####
+
+
+# for mac
+cd /Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/worm_imaging 
+
+# The RStudio session there has all the necessary info to get these tables done
+# once you have finished creating the table, copy the file into the gwas folder
+cp dbgwas_biofilm_PG.txt ../phylo_analysis/dbgwas/biofilm/
+
+
+####
+## 2. quality check of filenames within species names in the tree file
+####
+
+# go to the dbgwas location 
+cd /Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/dbgwas
+
+# there is a species.csv file there, if you have produced a different newick tree, I recommend 
+# to run the Python script extract_sp_nwk.py to get the species names
+
+python extract_sp_nwk.py tree.newick
+
+# get the IDs and names from the tree file
+awk  'NR>1{print $1}' biofilm/dbgwas_biofilm_PG.txt > query_names.txt
+awk '{print $1}' species.csv > tree_names.txt
+
+# one liner to get the difference in the set of query/tree names
+R -e 'library(tidyverse); library(readr); query = read_csv("query_names.txt", col_names=F); tree = read_csv("tree_names.txt", col_names=F); print(dim(setdiff(query, tree))[1])'
+# clean temp files
+rm tree_names.txt && rm query_names.txt
+
+
+####
+## 3. copy files into the HPC
+####
+
+# if not connected to the folder, use this command
+scp biofilm/dbgwas_biofilm_PG.txt dmarti14@login.hpc.imperial.ac.uk:/rds/general/user/dmarti14/home/pangenome_study/dbgwas
+
+
+####
+## 4. Check existence of fasta files in the HPC
+####
+
+
+# go to the HPC location where you are going to run the dbgwas analysis
+cd /rds/general/user/dmarti14/home/pangenome_study/dbgwas
+
+# to check that all fasta files are present in the fasta folder, run the bash script
+sh ./check_files.sh dbgwas_biofilm_PG.txt
+
+# if the output only tells you "Check done!", all fasta files are present in the folder
+# otherwise, check which ones you need to change
+
+####
+## 5. Submit the job to the cluster
+####
+
+qsub DBGWAS_biofilm_jen.pbs
+
+
+
