@@ -10,7 +10,7 @@ cd /Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/worm_
 
 # The RStudio session there has all the necessary info to get these tables done
 # once you have finished creating the table, copy the file into the gwas folder
-cp dbgwas_biofilm_PG.txt ../phylo_analysis/dbgwas/biofilm/
+cp worm_phenotype_ALL_DBGWAS.txt ../phylo_analysis/dbgwas/datasets/
 
 
 ####
@@ -26,7 +26,7 @@ cd /Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo
 python extract_sp_nwk.py tree.newick
 
 # get the IDs and names from the tree file
-awk  'NR>1{print $1}' biofilm/dbgwas_biofilm_PG.txt > query_names.txt
+awk  'NR>1{print $1}' datasets/worm_phenotype_ALL_DBGWAS.txt > query_names.txt
 awk '{print $1}' species.csv > tree_names.txt
 
 # one liner to get the difference in the set of query/tree names

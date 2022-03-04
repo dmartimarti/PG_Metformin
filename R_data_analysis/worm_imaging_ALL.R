@@ -282,6 +282,34 @@ all_FC_metadata %>%
   
 
 
+# DBGWAS versions ---------------------------------------------------------
+
+# save all genomes without biofilm at 50mM
+all_FC_metadata %>% 
+  mutate(Path = paste0('/rds/general/user/dmarti14/home/pangenome_study/complete/assemblies/no_evo/',fasta)) %>% 
+  drop_na(Mean_FC) %>% 
+  filter(Annotation_50mM == 'normal') %>% 
+  filter(!(phylogroup %in% removals)) %>% 
+  filter(Discard == 'No') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(ID = fasta, Phenotype = Mean_FC, Path) %>% 
+  distinct(ID, .keep_all = TRUE) %>% 
+  write_delim('worm_phenotype_no_biofilm_DBGWAS.txt', delim = '\t')
+
+
+# save all genomes 
+all_FC_metadata %>% 
+  mutate(Path = paste0('/rds/general/user/dmarti14/home/pangenome_study/complete/assemblies/no_evo/',fasta)) %>% 
+  drop_na(Mean_FC) %>% 
+  filter(!(phylogroup %in% removals)) %>% 
+  filter(Discard == 'No') %>% 
+  mutate(fasta = str_sub(fasta,1, -7)) %>% 
+  drop_na(fasta) %>% 
+  select(ID = fasta, Phenotype = Mean_FC, Path) %>% 
+  distinct(ID, .keep_all = TRUE) %>% 
+  write_delim('worm_phenotype_ALL_DBGWAS.txt', delim = '\t')
+
 
 
 
