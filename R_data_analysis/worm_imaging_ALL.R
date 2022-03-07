@@ -275,7 +275,7 @@ all_FC_metadata %>%
   drop_na(fasta) %>%
   select(ID = fasta, Path) %>%
   mutate(Phenotype = case_when(ID %in% biofilm_strains ~ 1,
-                             TRUE ~ 2)) %>% 
+                             TRUE ~ 0)) %>% 
   select(ID, Phenotype, Path)  %>% 
   distinct(ID, .keep_all = TRUE) %>% 
   write_delim('dbgwas_biofilm_PG.txt', delim = '\t')
