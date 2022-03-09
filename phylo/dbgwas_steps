@@ -40,7 +40,7 @@ rm tree_names.txt && rm query_names.txt
 ####
 
 # if not connected to the folder, use this command
-scp biofilm/dbgwas_biofilm_PG.txt dmarti14@login.hpc.imperial.ac.uk:/rds/general/user/dmarti14/home/pangenome_study/dbgwas
+scp datasets/worm_phenotype_ALL_DBGWAS.txt dmarti14@login.hpc.imperial.ac.uk:/rds/general/user/dmarti14/home/pangenome_study/dbgwas/datasets
 
 
 ####

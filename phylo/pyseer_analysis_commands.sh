@@ -74,3 +74,31 @@ pyseer --phenotypes ./pyseer_output/original_tables/bact/bact_phenotype_normal2s
  --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
  --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/bact/bact_phenotype_normal2superbio.tsv
 
+
+
+### Bacterial biofilm phenotype
+
+pyseer --phenotypes ./pyseer_output/original_tables/PG_bacterial_normal2superbio.txt --lmm \
+ --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/PG_bacterial_normal2superbio.tsv
+
+
+
+
+
+
+### working with unitigs
+
+
+pyseer --phenotypes ./pyseer_output/original_tables/worm_phenotype_ALL_no_biofilm.txt --lmm \
+ --kmers ./pyseer/unitigs/pg.unitigs.pyseer.gz --similarity ./pyseer_output/phylogeny_K.tsv \
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/worm_phenotype_ALL_no_biofilm_UNITIGS.tsv
+
+
+
+
+
+cat <(echo "#CHR SNP BP minLOG10(P) log10(p) r^2") <(paste <(sed '1d' penicillin_SNPs.txt | cut -d "_" -f 2) <(sed '1d' penicillin_SNPs.txt | cut -f 4) | awk '{p = -log($2)/log(10); print "26",".",$1,p,p,"0"}' ) | tr ' ' '\t' > penicillin_snps.plot
+
+
+
