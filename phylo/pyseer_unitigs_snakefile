@@ -12,7 +12,8 @@ rule all:
 		expand("results/{sample}/{sample}_significant_kmers.txt", sample=SAMPLES),
 		expand("results/{sample}/single_mapping/{sample}_sig_kmers.plot", sample=SAMPLES),
 		expand("results/{sample}/annotated_kmers/{sample}_annotated_kmers.txt", sample=SAMPLES),
-		expand("results/{sample}/annotated_kmers/{sample}_gene_hits.txt", sample=SAMPLES)
+		expand("results/{sample}/annotated_kmers/{sample}_gene_hits.txt", sample=SAMPLES),
+		expand("results/{sample}/annotated_kmers/{sample}_gene_hits.pdf", sample=SAMPLES)
 
 
 
@@ -51,8 +52,10 @@ rule count_patterns:
 		"results/{sample}/{sample}_kmer_pattern.txt"
 	output:
 		"results/{sample}/{sample}_count_patterns.txt"
+	log:
+		err="logs/{sample}/count_patterns.err"
 	shell:
-		"python {pyseer_scripts}/scripts/count_patterns.py {input} > {output}"
+		"python {pyseer_scripts}/scripts/count_patterns.py {input} > {output} 2>{log.err}"
 
 
 # draws a qq plot of the results
@@ -61,8 +64,11 @@ rule draw_qq:
 		"results/{sample}/{sample}_results.tsv"
 	output:
 		"results/{sample}/{sample}_qq_plot.png"
+	log:
+		out="logs/{sample}/draw_qq.out",
+		err="logs/{sample}/draw_qq.err"
 	shell:
-		"python {pyseer_scripts}/scripts/qq_plot.py {input} --output {output}"  
+		"python {pyseer_scripts}/scripts/qq_plot.py {input} --output {output}  >{log.out} 2>{log.err} "  
 
 
 # extract significant kmers from the results
@@ -72,8 +78,10 @@ rule sig_kmers:
 		"results/{sample}/{sample}_results.tsv"
 	output:
 		"results/{sample}/{sample}_significant_kmers.txt"
+	log:
+		err="logs/{sample}/sig_kmers.err"
 	shell:
-		"cat <(head -1 {input}) <(awk '$4<3.10E-05 {{print $0}}' {input}) > {output}"
+		"cat <(head -1 {input}) <(awk '$4<3.10E-05 {{print $0}}' {input}) > {output} 2>{log.err}"
 
 
 # maps the kmers to a ref genome and copy the necessary files into a folder
@@ -118,9 +126,16 @@ rule summarise:
 		"python {pyseer_scripts}/scripts/summarise_annotations.py {input} > {output}  2>{log.err}"
 
 
-# # summarise 
-# python ../pyseer/scripts/summarise_annotations.py  results/wp_ALL_no_biofilm_annotated_kmers.txt > results/gene_hits.txt
-
+rule gene_hit_plotting:
+	input:
+		"results/{sample}/annotated_kmers/{sample}_gene_hits.txt"
+	output:
+		"results/{sample}/annotated_kmers/{sample}_gene_hits.pdf"
+	log:
+		out="logs/{sample}/gene_hit_plotting.out",
+		err="logs/{sample}/gene_hit_plotting.err"
+	shell:
+		"Rscript ./scripts/gene_hits_plot.R -i {input} -o {output} >{log.out} 2>{log.err}"
 
 
 
