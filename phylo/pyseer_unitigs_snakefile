@@ -1,0 +1,126 @@
+SAMPLES=['worm_phenotype_ALL_no_biofilm']
+pyseer_scripts='/Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/pyseer'
+
+# run the script in ./pyseer_output
+# what to expect as an output
+rule all:
+	input:
+		expand("results/{sample}/{sample}_results.tsv", sample=SAMPLES),
+		expand("results/{sample}/{sample}_kmer_pattern.txt", sample=SAMPLES),
+		expand("results/{sample}/{sample}_count_patterns.txt", sample=SAMPLES),
+		expand("results/{sample}/{sample}_qq_plot.png", sample=SAMPLES),
+		expand("results/{sample}/{sample}_significant_kmers.txt", sample=SAMPLES),
+		expand("results/{sample}/single_mapping/{sample}_sig_kmers.plot", sample=SAMPLES),
+		expand("results/{sample}/annotated_kmers/{sample}_annotated_kmers.txt", sample=SAMPLES),
+		expand("results/{sample}/annotated_kmers/{sample}_gene_hits.txt", sample=SAMPLES)
+
+
+
+# performs the main pyseer analysis using the unitigs as kmers
+# uses 4 cpu cores (although I think it uses less), so in my Mac it can be
+# paralelised to 3 jobs at the same time
+rule pyseer:
+	input:
+		pheno="original_tables/{sample}.txt"
+	output:
+		main="results/{sample}/{sample}_results.tsv",
+		kmer="{sample}_kmer_pattern.txt"
+	log:
+		err="logs/{sample}/pyseer.{sample}.err"
+	shell:
+		 "pyseer --phenotypes {input.pheno} --lmm \
+		 --kmers unitigs/pg.unitigs.pyseer.gz --similarity phylogeny_K.tsv \
+		 --save-m mash_mds --max-dimensions 3 --cpu 4 --min-af 0.02 --max-af 0.98  \
+		 --output-patterns {output.kmer} >{output.main} 2>{log.err}"
+
+
+# moves the kmer pattern to the results folder
+rule move_kmer:
+	input:
+		"{sample}_kmer_pattern.txt"
+	output:
+		"results/{sample}/{sample}_kmer_pattern.txt"
+	shell:
+		"mv {input} {output}"
+
+
+# runs the python script count_patterns and stores it as a txt to see later
+# this step calculates the 
+rule count_patterns:
+	input:
+		"results/{sample}/{sample}_kmer_pattern.txt"
+	output:
+		"results/{sample}/{sample}_count_patterns.txt"
+	shell:
+		"python {pyseer_scripts}/scripts/count_patterns.py {input} > {output}"
+
+
+# draws a qq plot of the results
+rule draw_qq:
+	input:
+		"results/{sample}/{sample}_results.tsv"
+	output:
+		"results/{sample}/{sample}_qq_plot.png"
+	shell:
+		"python {pyseer_scripts}/scripts/qq_plot.py {input} --output {output}"  
+
+
+# extract significant kmers from the results
+# HERE YOU CAN CHANGE THE SIG THRESHOLD TO APPLY
+rule sig_kmers:
+	input:
+		"results/{sample}/{sample}_results.tsv"
+	output:
+		"results/{sample}/{sample}_significant_kmers.txt"
+	shell:
+		"cat <(head -1 {input}) <(awk '$4<3.10E-05 {{print $0}}' {input}) > {output}"
+
+
+# maps the kmers to a ref genome and copy the necessary files into a folder
+# these files can be uploaded to Phandango to study the results
+rule map_single_ref:
+	input:
+		sigkmers="results/{sample}/{sample}_significant_kmers.txt",
+		refgenome="ecoli_reference/GCF_000005845.2_ASM584v2_genomic.fna"
+	log:
+		out="logs/{sample}/map_single_ref.out",
+		err="logs/{sample}/map_single_ref.err"
+	output:
+		plot="results/{sample}/single_mapping/{sample}_sig_kmers.plot",
+		cpref="results/{sample}/single_mapping/GCF_000005845.2_ASM584v2_genomic.gff"
+	shell:
+		"python {pyseer_scripts}/phandango_mapper-runner.py {input.sigkmers} {input.refgenome} {output.plot} >{log.out} 2>{log.err} && \
+		cp {input.refgenome} {output.cpref}"
+
+# map the resultant kmers to a list of references
+rule annotate_kmers:
+	input:
+		sigkmers="results/{sample}/{sample}_significant_kmers.txt",
+		ref_list="references.txt"
+	log:
+		out="logs/{sample}/annotate_kmers.out",
+		err="logs/{sample}/annotate_kmers.err"
+	output:
+		"results/{sample}/annotated_kmers/{sample}_annotated_kmers.txt"
+	shell:
+		"python {pyseer_scripts}/annotate_hits_pyseer-runner.py {input.sigkmers} {input.ref_list} {output} >{log.out} 2>{log.err}"
+
+
+# summarise results from all steps above into a gene list 
+rule summarise:
+	input:
+		"results/{sample}/annotated_kmers/{sample}_annotated_kmers.txt",
+	log:
+		err="logs/{sample}/summarise.err"
+	output:
+		"results/{sample}/annotated_kmers/{sample}_gene_hits.txt"
+	shell:
+		"python {pyseer_scripts}/scripts/summarise_annotations.py {input} > {output}  2>{log.err}"
+
+
+# # summarise 
+# python ../pyseer/scripts/summarise_annotations.py  results/wp_ALL_no_biofilm_annotated_kmers.txt > results/gene_hits.txt
+
+
+
+
