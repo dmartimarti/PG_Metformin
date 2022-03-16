@@ -25,7 +25,7 @@ scree_plot_pyseer mash.tsv
 
 pyseer --phenotypes ./pyseer_output/original_tables/worm_phenotype_ALL.txt --lmm \
  --pres gene_presence_absence.Rtab --similarity ./pyseer_output/phylogeny_K.tsv \
- --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/worm_phenotype_ALL.tsv
+ --save-m mash_mds --max-dimensions 3 --cpu 8 --min-af 0.02 --max-af 0.98  > ./pyseer_output/results/worm_phenotype_ALL.tsv 2>log.err
 
 
 pyseer --phenotypes ./pyseer_output/original_tables/worm_phenotype_ALL_no_biofilm.txt --lmm \
