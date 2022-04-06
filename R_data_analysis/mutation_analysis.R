@@ -117,8 +117,9 @@ mp_muts %>%
   geom_histogram(stat = 'identity', color = 'black', size = 0.1) +
   xlim(0,178) +
   # facet_wrap(~GENE, scales = 'free_y') + 
-  labs(x = 'Number of mutations',
-       y = 'Position in the protein') +
+  labs(x = 'Position in the protein',
+       y = 'Number of mutations') +
+  cowplot::theme_cowplot(15) +
   theme(legend.position="top")
 
 ggsave(here('exploration','rcdA_mutations_pos.pdf'), height = 6, width = 9)
