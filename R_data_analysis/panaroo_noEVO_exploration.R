@@ -2,6 +2,10 @@
 # Manhattan plots along the population abundance per gene
 
 
+# libraries ---------------------------------------------------------------
+
+
+
 library(tidyverse) # master library to deal with data frames
 library(readxl) # read xlsx or xls files
 # library(FactoMineR) # for PCA
@@ -46,20 +50,24 @@ phylogr = metadata %>%
 
 # plot phylogroups
 phylogr %>%
+  filter(phylo_corrected != 'cladeI') %>% 
   mutate(Total = sum(N),
-         Fraction = round((N/Total)*100,1),
-         y_label_pos = Fraction + 3) %>%
+         Fraction = round((N/Total)*100,1)) %>%
+  group_by(phylo_corrected) %>% 
+  summarise(Fraction = sum(Fraction)) %>% 
+  mutate(y_label_pos = Fraction + 3) %>% 
   ggplot(aes(x = phylo_corrected, y = Fraction, fill = phylo_corrected)) +
-  geom_bar(stat = 'identity') +
+  geom_bar(stat = 'identity', color = 'black') +
   geom_text(aes(y = y_label_pos, label = Fraction), vjust = 1.6, size = 3.5) +
   labs(x = 'Phylogroups', y = '% of total') +
-  theme_cowplot(14) +
+  theme_cowplot(18) +
+  guides(fill = 'none') +
   theme(axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
 
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'phylogrous_dist_barplot.pdf'),
-             height = 8, width = 8, useDingbats = FALSE)
+             height = 6, width = 8, useDingbats = FALSE)
 
 
 
@@ -80,20 +88,23 @@ phylogr = metadata %>%
 
 phylogr %>%
   drop_na(phylo_corrected, Broadphenotype) %>% 
+  group_by(Broadphenotype) %>% 
   mutate(Total = sum(N),
          Fraction = round((N/Total)*100,1),
-         y_label_pos = Fraction + 3) %>%
+         y_label_pos = Fraction + 6) %>%
+  filter(Broadphenotype != 'Unknown') %>% 
   ggplot(aes(x = phylo_corrected, y = Fraction, fill = phylo_corrected)) +
-  geom_bar(stat = 'identity') +
+  geom_bar(stat = 'identity', color = 'black') +
   geom_text(aes(y = y_label_pos, label = Fraction), vjust = 1.6, size = 3.5) +
   labs(x = 'phylogroups', y = '% of total') +
-  facet_wrap(~Broadphenotype, ncol = 2) +
-  theme_cowplot(14) +
+  facet_wrap(~Broadphenotype, ncol = 3) +
+  theme_cowplot(18) +
+  guides(fill='none') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'phylogrous_phenotype_dist_barplot.pdf'),
-             height = 12, width = 12, useDingbats = FALSE)
+             height = 6, width = 10, useDingbats = FALSE)
 
 
 
@@ -524,13 +535,15 @@ gene_bin %>%
   ggplot(aes(x = total)) +
   geom_histogram(position = 'identity',
                  bins=70,
-                 fill = 'grey60') +
+                 fill = 'grey60', 
+                 color = 'black') +
   labs(y = 'Gene count',
-       x = 'Number of genomes with a specific gene')
+       x = 'Number of genomes with a specific gene') +
+  theme_cowplot(20)
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'gene_counts_per_genome.pdf'),
-             height = 8, width = 10, useDingbats = FALSE)
+             height = 5, width = 6, useDingbats = FALSE)
 
 
 
@@ -679,16 +692,17 @@ gene_fam_df %>%
   ggplot(aes(x=known, y = n)) +
   geom_col(aes(fill = known), color = 'black') +
   guides(fill = 'none') + 
+  scale_fill_manual(values = c('#2869EB', '#EBD420')) +
   labs(
     x = 'Gene source',
     y = 'Number of gene families'
   ) + 
-  theme_cowplot(17)
+  theme_cowplot(19)
 
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'known_unknown_genes.pdf'),
-             height = 10, width = 7, useDingbats = FALSE)
+             height = 7, width = 6, useDingbats = FALSE)
 
 
 
@@ -734,18 +748,19 @@ gene_fam_df %>%
            position = 'dodge') +
   geom_text(aes(label = round(prop,2)), 
             position = position_dodge(width = 0.9),
-            vjust=-0.25) + 
+            vjust=-0.25, 
+            size = 4) + 
   ylim(0,100) +
   # guides(fill = 'none') + 
   labs(
     x = 'Gene source',
     y = '% of gene families'
   ) + 
-  theme_cowplot(17)
+  theme_cowplot(19)
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'known_unknown_genes_perClass_prop.pdf'),
-             height = 8, width = 9, useDingbats = FALSE)
+             height = 7, width = 7, useDingbats = FALSE)
 
 
 
