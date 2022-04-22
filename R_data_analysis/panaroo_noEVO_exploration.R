@@ -21,6 +21,9 @@ theme_set(theme_cowplot(14))
 # metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
 #                       sheet = "metadata")
 
+metadata = read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx", 
+                      sheet = "metadata")
+
 
 # phylogroups -------------------------------------------------------------
 
@@ -28,6 +31,7 @@ theme_set(theme_cowplot(14))
 # summarise phylogroups 
 phylogr = metadata %>%
   filter(Discard == 'No') %>% 
+  filter(phylogroup != 'cladeI') %>% 
   # filter(Broadphenotype != 'Evolutionexperiment') %>%
   drop_na(Assembly) %>% 
   mutate(
@@ -75,6 +79,7 @@ phylogr = metadata %>%
   summarise(N = n()) %>% ungroup
 
 phylogr %>%
+  drop_na(phylo_corrected, Broadphenotype) %>% 
   mutate(Total = sum(N),
          Fraction = round((N/Total)*100,1),
          y_label_pos = Fraction + 3) %>%
@@ -734,7 +739,7 @@ gene_fam_df %>%
   # guides(fill = 'none') + 
   labs(
     x = 'Gene source',
-    y = 'Number of gene families'
+    y = '% of gene families'
   ) + 
   theme_cowplot(17)
 
@@ -757,18 +762,47 @@ gene_fam_df %>%
 
 
 
+# PCA of gene P/A ---------------------------------------------------------
+
+gene_bin2 = gene_bin %>% 
+  select(-total)
+
+# transpose the matrix to have gene names as columns
+gene_bin2 = gene_bin2 %>% 
+  pivot_longer(cols = where(is.numeric), 
+               values_to = 'presence', names_to = 'genome') %>% 
+  pivot_wider(names_from = gene, values_from = presence)
+
+
+pca_fit <- gene_bin2 %>% 
+  select(where(is.numeric)) %>% # retain only numeric columns
+  prcomp(scale = F)
 
 
 
 
+pca_plot = pca_fit %>%
+  broom::augment(gene_bin2) %>% # add original dataset back in
+  select(genome, .fittedPC1:.fittedPC5) %>% 
+  left_join(metadata %>% 
+              mutate(genome = str_sub(fasta, start = 1, end = -7), .before = ID) %>% 
+              select(genome, Broadphenotype, phylogroup))
 
 
 
+pca_plot %>% 
+  drop_na(phylogroup) %>% 
+  filter(phylogroup != 'cladeI') %>% 
+  filter(phylogroup != 'E or cladeI') %>% 
+  ggplot(aes(.fittedPC1, .fittedPC2, color = phylogroup, fill = phylogroup)) + 
+  geom_point(size = 2, alpha = 0.7) +
+  # stat_ellipse() +
+  stat_ellipse(level=0.95, geom = 'polygon', alpha = 0.6) +
+  theme_half_open(12) 
 
-
-
-
-
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'PCA_gene_PA.pdf'),
+             height = 8, width = 9, useDingbats = FALSE)
 
 
 
