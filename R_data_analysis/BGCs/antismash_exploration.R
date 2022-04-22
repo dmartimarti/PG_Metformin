@@ -47,11 +47,15 @@ bgc = read_csv("antismash_summary.csv")
 smiles = read_csv("antismash_summary_smiles.csv")
 
 
-metadata = read_excel("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx", 
+# Windows: "D:/MRC_Postdoc/Pangenomic/pangenome_analysis/metadata/MAIN_metadata.xlsx"
+# Mac: "~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx"
+metadata = read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx", 
                       sheet = "metadata")
 
 
-genome_info = read_delim("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv", 
+# Windows = "D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv"
+# Mac = "~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv"
+genome_info = read_delim("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv", 
                          delim = "\t", escape_double = FALSE, 
                          col_types = cols(Assembly = col_character()), 
                          trim_ws = TRUE) %>% 
@@ -64,6 +68,8 @@ genome_info = read_delim("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo
 
 
 # this is the info of the core genome genes
+
+
 core_genome_info = read_delim("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/core_genomes/quast_quality/transposed_report_core_genomes.tsv", 
                          delim = "\t", escape_double = FALSE, 
                          col_types = cols(Assembly = col_character()), 
@@ -107,7 +113,9 @@ bgc %>%
        bacterial strains in our collection </i>') +
   guides(fill = 'none') +
   theme_cowplot(16) +
-  theme_nice 
+  theme_nice_45 +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+
 
 ggsave(here('exploration', 'BGC_numbers.pdf'), height = 8, width = 10)
 
@@ -173,6 +181,47 @@ core_genome_info %>%
 
 ggsave(here('exploration', 'genome_size_CORE_density.pdf'), height = 6, width = 8)
 
+
+# genome size by phylogroup
+
+phylogr_data = metadata %>% 
+  filter(Discard == 'No') %>% 
+  filter(phylogroup != 'cladeI') %>% 
+  mutate(genome = str_sub(fasta, 1, -7), .before = ID) %>% 
+  select(genome, phylogroup)
+
+genome_info %>% 
+  filter(genome != '2.3') %>% 
+  mutate(genome_length = genome_length/1000000) %>% 
+  left_join(phylogr_data) %>% 
+  drop_na(phylogroup) %>% 
+  ggplot(aes(genome_length)) +
+  geom_histogram(aes(y = ..density.., fill = phylogroup) ,bins = 30, color = 'black') +
+  geom_density(aes(fill = phylogroup), alpha = .3) +
+  labs(x = 'Genome size (Mb)',
+       y = 'Density') +
+  facet_wrap(~phylogroup, ncol = 1, scales = 'free_y') +
+  theme_cowplot(14)
+
+ggsave(here('exploration', 'genome_size_phylogroup.pdf'), height = 12, width = 7)
+
+
+genome_info %>% 
+  filter(genome != '2.3') %>% 
+  mutate(genome_length = genome_length/1000000) %>% 
+  left_join(phylogr_data) %>% 
+  drop_na(phylogroup) %>% 
+  ggplot(aes(x = phylogroup, y = genome_length, fill = phylogroup)) +
+  geom_boxplot() + 
+  geom_point(position = position_jitterdodge())+
+  labs(x = 'Phylogroup',
+       y = 'Genome size (Mb)') +
+  guides(fill = 'none') +
+  theme_cowplot(17)
+
+ggsave(here('exploration', 'genome_size_phylogroup_boxplot.pdf'), height = 8, width = 10)
+
+
 ##  GC content ####
 genome_info %>% 
   filter(genome != '2.3') %>% 
@@ -198,6 +247,45 @@ core_genome_info %>%
 
 
 ggsave(here('exploration', 'GC_content_CORE_density.pdf'), height = 8, width = 10)
+
+
+# GC content by phylogruop
+
+genome_info %>%  
+  left_join(phylogr_data) %>% 
+  drop_na(phylogroup) %>% 
+  filter(genome != '2.3') %>% 
+  ggplot(aes(gc_content)) +
+  geom_histogram(aes(y = ..density.., fill = phylogroup),
+                 bins = 30, color = 'black') +
+  geom_density(aes(fill = phylogroup), alpha = .3) +
+  labs(x = 'GC content (%)',
+       y = 'Density') +
+  facet_wrap(~phylogroup, ncol = 1, scales = 'free_y') +
+  theme_cowplot(17)
+
+
+ggsave(here('exploration', 'GC_content_phylogroup.pdf'), height = 12, width = 7)
+
+
+
+genome_info %>%  
+  left_join(phylogr_data) %>% 
+  drop_na(phylogroup) %>% 
+  filter(genome != '2.3') %>% 
+  ggplot(aes(x = phylogroup, y = gc_content, fill = phylogroup)) +
+  geom_boxplot() + 
+  geom_point(position = position_jitterdodge())+
+  labs(x = 'Phylogroup',
+       y = 'Genome size (Mb)') +
+  guides(fill = 'none') +
+  theme_cowplot(17)
+
+ggsave(here('exploration', 'GC_content_phylogroup_boxplot.pdf'), height = 8, width = 10)
+
+
+
+
 
 ##  GC vs genome size ####
 genome_info %>% 
