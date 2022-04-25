@@ -13,6 +13,7 @@ library(readxl)
 library(broom)
 library(openxlsx)
 library(here)
+library(cowplot)
 
 theme_set(theme_classic() +
             theme(axis.text=element_text(size=15),
@@ -80,6 +81,26 @@ data %>%
 
 ggsave(here('summary', 'boxplot_bact_scores.pdf'))
 
+
+
+data %>% 
+  drop_na(Bact_score_mean) %>% 
+  filter(Bact_score_mean < 4) %>% 
+  distinct(Strain, .keep_all = T) %>% 
+  ggplot(aes(x = fct_reorder(Strain, desc(Bact_score_mean)), y = Bact_score_mean)) +
+  geom_point(size = 1, alpha = 0.7) +
+  geom_errorbar(aes(ymax = Bact_score_mean + SD_Bact_metf_100/5, 
+                    ymin = Bact_score_mean - SD_Bact_metf_100/5), size = 0.2) +
+  labs(
+    x = 'Strains',
+    y = 'Mean Score (± SD)'
+  ) + 
+  theme_cowplot(17) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank())
+
+ggsave( 'bacteria_FC_overview_DONT_USE.pdf',
+       height = 7, width = 9)
 
 
 

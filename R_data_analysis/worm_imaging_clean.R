@@ -259,26 +259,31 @@ for (plate in plates){
 ### Mean Intensity ####
 # # # # # # # # # # # #
 
+data_filt_mad = read_csv('exploration/raw_data_filtered.csv')
+
+
 strains = c('OP50', 'Nissle1917', 'NRG857C', 'MG1655', 'ECOR-02a')
 # asdf = c('DE-COMM-3445', 'HM-347', 'ECOR-67', 'NILS21')
 # # strains for Jen's master thesis plot
 # strains = c('MG1655', 'HM-366', 'DE-COMM-4977', 'OP50', 'NILS19')
-IDs = c('NT12085')
+# IDs = c('NT12085')
 # plot Mean intensity by itself (it looks good!)
 data_filt_mad %>% 
   # filter(Probability_of_SingleWorm > 0.7) %>%
-  # filter(Strainname %in% strains) %>%
-  filter(ID %in% IDs) %>% 
+  filter(Strainname %in% strains) %>%
+  # filter(ID %in% IDs) %>% 
   mutate(Strainname = factor(Strainname, levels = strains)) %>%
   ggplot(aes(y = Mean_Intensity - Mean_Intensity_in_neighborhood , x = Strainname, fill = Metf)) +
   geom_boxplot(outlier.colour = 'red') +
   geom_point(position = position_jitterdodge(jitter.width = 0.3)) +
   scale_fill_manual(values = c('#F5B607', '#0B97D4')) +
   # facet_wrap(~Replicate) +
-  theme_light() 
+  labs(x = 'Strain',
+       y = 'Mean intensity') +
+  cowplot::theme_cowplot(16) 
 
-# ggsave(file = here('exploration', 'Mean_Intensity_test.pdf'),
-#        width = 11, height = 7)
+ggsave(file = here('exploration', 'Mean_Intensity_presentation.pdf'),
+       width = 10, height = 7)
 
 
 

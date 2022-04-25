@@ -13,6 +13,7 @@ library(readxl)
 library(broom)
 library(openxlsx)
 library(here)
+library(cowplot)
 
 theme_set(theme_classic() +
             theme(axis.text=element_text(size=15),
@@ -57,9 +58,27 @@ all_FC_metadata = all_FC %>%
 
 all_FC_metadata %>% 
   drop_na(Mean_FC) %>% 
-  ggplot(aes(x = fct_reorder(ID, Mean_FC), y = Mean_FC, color = Origin)) +
-  geom_point(size = 2, alpha = 0.7)
+  ggplot(aes(x = fct_reorder(ID, desc(Mean_FC)), y = Mean_FC, color = Origin)) +
+  geom_point(size = 2, alpha = 0.7) +
+  theme(axis.text.x = element_blank())
 
+
+all_FC_metadata %>% 
+  drop_na(Mean_FC) %>% 
+  distinct(ID, .keep_all = T) %>% 
+  ggplot(aes(x = fct_reorder(ID, desc(Mean_FC)), y = Mean_FC)) +
+  geom_point(size = 1, alpha = 0.7) +
+  geom_errorbar(aes(ymax = Mean_FC + SD_FC, ymin = Mean_FC - SD_FC), size = 0.2) +
+  labs(
+    x = 'Strains',
+    y = 'Mean FC (± SD)'
+  ) + 
+  theme_cowplot(17) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank())
+
+ggsave(here('exploration', 'worm_FC_overview.pdf'),
+       height = 7, width = 9)
 
 all_FC_metadata %>% 
   drop_na(Mean_FC) %>% 
