@@ -812,7 +812,7 @@ pca_plot %>%
   ggplot(aes(.fittedPC1, .fittedPC2, color = phylogroup, fill = phylogroup)) + 
   geom_point(size = 2, alpha = 0.7) +
   # stat_ellipse() +
-  stat_ellipse(level=0.95, geom = 'polygon', alpha = 0.6) +
+  stat_ellipse(level=0.95, geom = 'polygon', alpha = 0.3) +
   theme_half_open(12) 
 
 dev.copy2pdf(device = cairo_pdf,
