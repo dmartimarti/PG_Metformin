@@ -191,8 +191,9 @@ smiles.sum %>%
 
 smiles.sum %>% 
   arrange(desc(n)) %>% 
-  # mutate(num_name = seq(1,28,1),
-  #        num_name = as.factor(num_name)) %>% 
+  mutate(num_name = seq(1,dim(smiles.sum)[1],1)) %>%
+  filter(num_name < 30) %>% 
+  mutate(num_name = as.factor(num_name)) %>% 
   ggplot(aes(x = fct_reorder(num_name, n, .desc = T), y = n)) +
   geom_bar(stat='identity') +
   theme_cowplot(17) +
@@ -206,5 +207,8 @@ smiles.sum %>%
   ggplot(aes(mol_weight)) +
   geom_density()
 
-
+smiles.sum %>% 
+  arrange(desc(n)) %>% 
+  mutate(num_name = seq(1,dim(smiles.sum)[1],1)) %>% 
+  write_csv(here('exploration', 'smiles_summary.csv'))
 
