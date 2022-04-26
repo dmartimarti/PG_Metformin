@@ -824,3 +824,25 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
+# panstripes --------------------------------------------------------------
+
+remotes::install_github("gtonkinhill/panstripe")
+
+library(panstripe)
+library(ape)
+set.seed(1234)
+
+# Load files
+
+
+pa <- read_rtab('gene_presence_absence.Rtab')
+tree <- read.tree('phy_fast_tree/core_fast_tree.treefile')
+
+# Run panstripe
+fit <- panstripe(pa, tree)
+fit$summary
+
+# Plot results
+plot_pangenome_fits(fit, include_data = TRUE)
+
+
