@@ -10,6 +10,7 @@ library(ggrepel)
 library(viridis)
 library(openxlsx)
 # library(tidymodels)
+library(cowplot)
 
 # load data ---------------------------------------------------------------
 
@@ -66,31 +67,39 @@ merg_data = merg_data %>%
 merg_data %>% 
   # filter(!(Strain %in% c('yqaA', 'yajC'))) %>% 
   ggplot(aes(x = aska_mean, y = keio_mean, size = rest, colour = distance)) +
-  geom_hline(yintercept = 0.42, color = 'black', size = 1.2) +
-  geom_vline(xintercept = 0.49, color = 'black', size = 1.2) +
+  geom_hline(yintercept = 0.42, color = 'black', size = 1.2, alpha = 0.4) +
+  geom_vline(xintercept = 0.49, color = 'black', size = 1.2, alpha = 0.4) +
   geom_point() +
-  geom_text_repel(aes(label = labels)) +
+  geom_text_repel(aes(label = labels),
+                  max.overlaps = Inf) +
   scale_color_viridis_c(name = 'Distance', option = 'viridis', direction = -1) +
   labs(x = 'ASKA mean ratio',
        y = 'KEIO mean ratio',
-       size = "Ratio \ndifference")
+       size = "Ratio \ndifference") +
+  theme_half_open(17)
 
 
 merg_data %>% 
   # filter(!(Strain %in% c('yqaA', 'yajC'))) %>% 
   ggplot(aes(x = aska_2, y = keio_2, size = rest, colour = distance2)) +
-  geom_hline(yintercept = 0, color = 'black', size = 1.2) +
-  geom_vline(xintercept = 0, color = 'black', size = 1.2) +
+  geom_hline(yintercept = 0, color = 'black', size = 1.2, alpha = 0.4) +
+  geom_vline(xintercept = 0, color = 'black', size = 1.2, alpha = 0.4) +
   geom_point() +
-  geom_text_repel(aes(label = labels)) +
+  geom_text_repel(aes(label = labels),
+                  max.overlaps = Inf) +
   scale_color_viridis_c(name = 'Distance', option = 'viridis', direction = -1) +
   labs(x = 'ASKA mean ratio',
        y = 'KEIO mean ratio',
-       size = "Ratio \ndifference")
+       size = "Ratio \ndifference") +
+  # guides(size = 'none') +
+  theme_cowplot(17)
 
 ggsave(file = here('summary','KEIO_ASKA_summary.pdf'),
        width = 13, height = 10)  
 
+
+ggsave(file = here('summary','KEIO_ASKA_summary_v2.pdf'),
+       width = 10, height = 8)  
 
 
 
