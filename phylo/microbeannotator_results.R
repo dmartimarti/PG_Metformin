@@ -6,11 +6,25 @@ library(tidyverse)
 library(ComplexHeatmap)
 library(matrixStats)
 library(viridis)
+library(readxl)
+
+
+
+# read data ---------------------------------------------------------------
 
 
 paths = read_delim("metabolic_summary__module_completeness.tab", 
                    delim = "\t", escape_double = FALSE, 
                    trim_ws = TRUE)
+
+
+
+metadata =  read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx", 
+                            sheet = "metadata") %>% 
+  mutate(ID = str_sub(fasta, 1, -7))
+
+
+metadata 
 
 
 paths_matrix = paths %>% 
@@ -137,6 +151,52 @@ Heatmap(reduced_matrix,
 quartz.save(file = 'reduced_heatmap_thr10.pdf',
             type = 'pdf', dpi = 300, height = 8, width = 13)
 
+
+
+
+
+
+### explore these results ####
+
+reduced_tibble = t(reduced_matrix) %>% 
+  as_tibble(rownames = 'Genomes')
+
+# betaine production
+
+bet_0_genomes = reduced_tibble %>% 
+  filter(`Betaine biosynthesis, choline => betaine` < 100) %>% 
+  pull(Genomes)
+  
+
+metadata %>% 
+  drop_na(Broadphenotype) %>% 
+  filter(ID %in% bet_0_genomes) %>% 
+  dplyr::count(Broadphenotype) %>% 
+  mutate(total = sum(n),
+         prop = n/total)
+  
+  
+metadata %>% 
+  drop_na(Broadphenotype) %>% 
+  # filter(ID %in% bet_0_genomes) %>% 
+  dplyr::count(Broadphenotype) %>% 
+  mutate(total = sum(n),
+         prop = n/total)
+  
+
+bet_metadata = metadata %>% 
+  drop_na(Broadphenotype) %>% 
+  select(ID, Broadphenotype) %>% 
+  filter(!(Broadphenotype %in% c('Unknown'))) %>% 
+  filter(!(Broadphenotype %in% c('Commensal strain'))) %>% 
+  mutate(betaine = case_when(ID %in% bet_0_genomes ~ 'non-producer',
+                             TRUE ~ 'producer')) %>% 
+  distinct(ID, .keep_all = T) 
+
+# how 
+table(bet_metadata$Broadphenotype, bet_metadata$betaine)
+
+chisq.test(bet_metadata$Broadphenotype, bet_metadata$betaine, correct=FALSE)
 
 
 # grouping paths
