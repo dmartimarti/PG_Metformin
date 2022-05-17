@@ -1,0 +1,38 @@
+#PBS -l walltime=24:0:0
+#PBS -l select=1:ncpus=2:mem=2gb
+#PBS -N PG_gapseq_batch_3
+#PBS -J 1-99
+
+### script for batch 3 of 99 genomes
+
+# Load modules for any applications
+
+module load anaconda3/personal
+source activate gapseq-dev
+
+WORK=$HOME/gapseq
+OUT=$HOME/gapseq/output
+INPUT=$WORK/batch_files/batch_3.txt
+MEDIA=$WORK/dat/media/LBmed.csv
+
+# JOBID=`echo ${PBS_JOBID} | cut -d'[' -f1`
+
+JOBID=batch_3
+
+GENOME=`head -n $PBS_ARRAY_INDEX $INPUT | tail -1`
+# take the last part of the path as the output folder name
+GENOME_NAME=$(basename $GENOME) 
+
+echo "The Genome to analyse for the job ${PBS_ARRAY_INDEX} is ${GENOME_NAME}"
+# echo "The temp folder where the output should be saved is ${TMPDIR}"
+
+cd ${OUT}
+mkdir ${JOBID}
+cd ${JOBID}
+mkdir ${GENOME_NAME}
+cd ${GENOME}
+
+# TPDR=${OUT}/${JOBID}
+
+# do the processes
+$WORK/gapseq doall $GENOME $MEDIA
