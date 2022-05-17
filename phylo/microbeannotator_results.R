@@ -188,7 +188,7 @@ bet_metadata = metadata %>%
   drop_na(Broadphenotype) %>% 
   select(ID, Broadphenotype) %>% 
   filter(!(Broadphenotype %in% c('Unknown'))) %>% 
-  filter(!(Broadphenotype %in% c('Commensal strain'))) %>% 
+  # filter(!(Broadphenotype %in% c('Commensal strain'))) %>% 
   mutate(betaine = case_when(ID %in% bet_0_genomes ~ 'non-producer',
                              TRUE ~ 'producer')) %>% 
   distinct(ID, .keep_all = T) 
