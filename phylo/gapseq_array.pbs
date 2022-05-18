@@ -3,7 +3,7 @@
 #PBS -N PG_gapseq_batch_3
 #PBS -J 1-99
 
-### script for batch 3 of 99 genomes
+### script for batch_3 of 99 genomes
 
 # Load modules for any applications
 
@@ -30,7 +30,7 @@ cd ${OUT}
 mkdir ${JOBID}
 cd ${JOBID}
 mkdir ${GENOME_NAME}
-cd ${GENOME}
+cd ${GENOME_NAME}
 
 # TPDR=${OUT}/${JOBID}
 
