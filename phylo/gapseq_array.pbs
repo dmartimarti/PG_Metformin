@@ -1,9 +1,9 @@
-#PBS -l walltime=24:0:0
-#PBS -l select=1:ncpus=2:mem=2gb
-#PBS -N PG_gapseq_batch_3
-#PBS -J 1-99
+#PBS -l walltime=72:0:0
+#PBS -l select=1:ncpus=4:mem=4gb
+#PBS -N PG_gapseq_batch_missing
+#PBS -J 1-24
 
-### script for batch_3 of 99 genomes
+### script for batch_missing of 99 genomes
 
 # Load modules for any applications
 
@@ -12,12 +12,12 @@ source activate gapseq-dev
 
 WORK=$HOME/gapseq
 OUT=$HOME/gapseq/output
-INPUT=$WORK/batch_files/batch_3.txt
+INPUT=$WORK/batch_files/batch_missing.txt
 MEDIA=$WORK/dat/media/LBmed.csv
 
 # JOBID=`echo ${PBS_JOBID} | cut -d'[' -f1`
 
-JOBID=batch_3
+JOBID=batch_missing
 
 GENOME=`head -n $PBS_ARRAY_INDEX $INPUT | tail -1`
 # take the last part of the path as the output folder name
