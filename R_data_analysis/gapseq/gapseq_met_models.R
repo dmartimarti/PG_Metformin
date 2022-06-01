@@ -39,16 +39,70 @@ getMetaboliteProduction <- function(mod) {
 }
 
 
+# read metadata -------------------------
+
+
+library(readxl)
+metadata = read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx")
+
+
+
+
+# get the files names
+files_list = list.files(path = ".", pattern = ".RDS")
+
+gnm_names = list.files(path = ".", pattern = ".RDS") %>% 
+  str_sub(start = 1, end = -5)
+
+# filter metadata for the bugs we want to analyse: AUS and ECOREF
+meta_filt = metadata %>% 
+  mutate(Genome = str_sub(fasta, start = 1, end = -7), .before = ID) %>% 
+  filter(Discard == 'No') %>% 
+  filter(Origin %in% c('AUS', 'ECOREF')) %>% 
+  filter(Genome %in% gnm_names) %>% 
+  distinct(Genome, .keep_all = T) 
+
+
 
 # read models -------------------------------------------------------------
 
-library(BacArena)
 
 b1 <- readRDS("NT12060_237.RDS") # 
 mg <- readRDS("NT12001_189.RDS") # for MG1655
 
 getMetaboliteProduction(b1)[1:10]
 getMetaboliteProduction(mg)[1:10]
+
+
+b1_met = getMetaboliteProduction(b1)
+
+
+
+# sybil sims --------------------------------------------------------------
+
+### 1. read model ####
+
+b1 <- readRDS("NT12060_237.RDS") 
+
+### 2. run the FBA ####
+
+optL = optimizeProb(b1, 
+                    algorithm = 'fba', 
+                    retOptSol= F)
+
+### 3. get the obj function ####
+
+optL$obj
+
+
+
+
+
+
+
+
+# BacArena ----------------------------------------------------------------
+
 
 
 # Small fix to D/L-Lactate secretion (*) and model names
@@ -85,9 +139,16 @@ CF_sim <- simEnv(arena, time=10, sec_obj = "mtf",
 # Plot levels of Acetate, Buyrate, and Lactate as well as growth
 par(mfrow=c(1,2))
 plotCurves2(CF_sim,legendpos = "topleft",
-            subs = c("cpd00211_e0","cpd00029_e0","cpd00159_e0"),
+            subs = c("cpd00211_e0","cpd00029_e0","cpd00159_e0", "cpd02799"),
             dict = list(cpd00011_e0 = "CO2", 
                         cpd00029_e0 = "Acetate", 
-                        cpd00013_e0 = "Lactate"))
+                        cpd00013_e0 = "Lactate",
+                        cpd02799_e0 = 'Cosa'))
+
+
+par(mfrow=c(1,2))
+plotCurves2(CF_sim,legendpos = "topleft",
+            subs = c("cpd02799_c0"),
+            dict = list(cpd02799_c0 = 'Cosa'))
 
 
