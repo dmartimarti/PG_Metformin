@@ -60,7 +60,8 @@ meta_filt = metadata %>%
   filter(Discard == 'No') %>% 
   filter(Origin %in% c('AUS', 'ECOREF')) %>% 
   filter(Genome %in% gnm_names) %>% 
-  distinct(Genome, .keep_all = T) 
+  distinct(Genome, .keep_all = T) %>% 
+  mutate(theo_growth = 0) # make a new variable for the theoretical growth
 
 
 
@@ -96,9 +97,29 @@ optL$obj
 
 
 
+# looping over the genomes ------------------------------------------------
 
 
+growth = c()
+for (model in files_list) {
+  
+  cat(glue::glue('Reading model {model}\n\n'))
+  
+  temp_model = readRDS(model)
+  
+  optL = optimizeProb(temp_model, 
+                      algorithm = 'fba', 
+                      retOptSol= F)
+  
+  growth = c(growth,optL$obj)
+}
 
+names(growth) = files_list
+
+growth %>% 
+  as_tibble(rownames = 'Model') %>% 
+  ggplot(aes(x = fct_reorder(Model, value), y = value)) +
+  geom_point()
 
 
 # BacArena ----------------------------------------------------------------

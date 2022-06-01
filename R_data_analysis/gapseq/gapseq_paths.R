@@ -225,3 +225,19 @@ Heatmap(paths_matrix,
 quartz.save(file = '../exploration/ALL_Pathways_heatmap_noNames.pdf',
             type = 'pdf', height = 9, width = 12)
 
+
+
+
+
+
+# in depth analysis -------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
