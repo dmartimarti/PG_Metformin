@@ -45,7 +45,9 @@ getMetaboliteProduction <- function(mod) {
 library(readxl)
 metadata = read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx")
 
-
+modelSeed_compounds <- read_delim("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/gapseq/modelSeed_compounds.tsv", 
+                                  delim = "\t", escape_double = FALSE, 
+                                  trim_ws = TRUE)
 
 
 # get the files names
@@ -121,6 +123,67 @@ growth %>%
   ggplot(aes(x = fct_reorder(Model, value), y = value)) +
   geom_point()
 
+
+
+
+# extract metabolites from models -----------------------------------------
+
+
+tibble('met_name' = b1@met_name, 'met_id' = b1@met_id)
+
+model_metabolites = tibble()
+for (model in files_list) {
+  
+  cat(glue::glue('Reading model {model}\n\n'))
+  
+  temp_model = readRDS(model)
+  
+  temp_df = tibble('met_name' = temp_model@met_name, 
+                   'met_id' = temp_model@met_id, 
+                   'model' = model)
+  
+  model_metabolites = model_metabolites %>% bind_rows(temp_df)
+}
+
+# fix names and values
+model_metabolites = model_metabolites %>% 
+  mutate(comp = str_sub(met_name, start = -2),
+         met_name = str_sub(met_name, start = 1, end = -4),
+         met_id = str_sub(met_id, start = 1, end = -5),
+         model = str_sub(model, start = 1, end = -5))
+
+write_csv(model_metabolites, '../model_metabolites.csv')
+
+# model description -------------------------------------------------------
+
+# media conditions
+# Exchange reaction list
+
+mg@met_id
+
+# get cpd ids
+id = str_sub(mg@met_id, end = -5)
+compartments = str_sub(mg@met_id, start = -4)
+# map to model seed database
+new_cpd_id = tibble(id, compartments) %>% 
+  inner_join(modelSeed_compounds %>% select(id, abbreviation)) %>% 
+  mutate(new_vector = str_c(abbreviation, compartments)) %>% 
+  pull(new_vector)
+# change in the model
+mg@met_id = new_cpd_id
+
+
+# get exchange reactions
+
+ex = findExchReact(mg)
+opt = optimizeProb(mg)
+
+
+# uptake react
+
+upt = uptReact(ex)
+
+ex[upt]
 
 # BacArena ----------------------------------------------------------------
 
