@@ -230,14 +230,119 @@ quartz.save(file = '../exploration/ALL_Pathways_heatmap_noNames.pdf',
 
 
 
-# in depth analysis -------------------------------------------------------
+# metabolites -------------------------------------------------------
+
+# read metabolites extracted from the R objects (see the other script)
+metab = read_csv("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/gapseq/model_metabolites.csv")
+
+
+gnm_valid = meta_filt %>% pull(Genome)
+
+unique(metab$comp)
+
+gnm_remove = c('SPC_3.1','OP50',
+               'NT12226_337','NT12229','NT12169_305',
+               '157')
+
+metab %>% 
+  filter(!(model %in% gnm_remove)) %>% 
+  filter(model %in% gnm_valid) %>% 
+  group_by(model) %>% 
+  count() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(color = 'black', fill = 'grey50', bins = 30) +
+  labs(
+    x = 'Molecules',
+    y = 'Count'
+  )
+
+ggsave("../exploration/molecules_histogram.pdf", height = 7, width = 9)
+  
+
+
+
+metab %>% distinct(comp)
+
+## periplasm metabs ####
+
+# simple version with ggplot
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'p0') %>% 
+  mutate(val = 1) %>% 
+  ggplot(aes(met_name, model, fill = val)) +
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 90))
+
+# complexHeatmap
+mets_pa = metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'p0') %>% 
+  select(met_name, model) %>% 
+  mutate(presence = 1) %>% 
+  pivot_wider(names_from = met_name, values_from = presence, values_fill = 0)
+
+mets_names = names(mets_pa)
+gnm_names = mets_pa$model
+
+mets_matrix = mets_pa %>% 
+  select(-model) %>% 
+  as.matrix() 
+
+rownames(mets_matrix) = gnm_names
+
+
+col_fun = colorRamp2(c(0, 1), c("white", "#0949AB"))
+
+Heatmap(mets_matrix, 
+        col = col_fun,
+        name = "Presence")
+
+
+quartz.save(file = '../exploration/Metabs_periplasm_heatmap.pdf',
+            type = 'pdf', height = 80, width = 9)
 
 
 
 
 
+## external metabs ####
 
 
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'e0') %>% 
+  mutate(val = 1) %>% 
+  ggplot(aes(met_name, model, fill = val)) +
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 90))
 
 
+# complexHeatmap
+mets_pa = metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'e0') %>% 
+  select(met_name, model) %>% 
+  mutate(presence = 1) %>% 
+  pivot_wider(names_from = met_name, values_from = presence,
+              values_fn = mean, values_fill = 0)
 
+mets_names = names(mets_pa)
+gnm_names = mets_pa$model
+
+mets_matrix = mets_pa %>% 
+  select(-model) %>% 
+  as.matrix() 
+
+rownames(mets_matrix) = gnm_names
+
+
+col_fun = colorRamp2(c(0, 1), c("white", "#0949AB"))
+
+Heatmap(mets_matrix, 
+        col = col_fun,
+        name = "Presence")
+
+
+quartz.save(file = '../exploration/Metabs_ext_heatmap.pdf',
+            type = 'pdf', height = 80, width = 30)
