@@ -146,13 +146,18 @@ for (model in files_list) {
 }
 
 # fix names and values
-model_metabolites = model_metabolites %>% 
-  mutate(comp = str_sub(met_name, start = -2),
-         met_name = str_sub(met_name, start = 1, end = -4),
-         met_id = str_sub(met_id, start = 1, end = -5),
-         model = str_sub(model, start = 1, end = -5))
 
-write_csv(model_metabolites, '../model_metabolites.csv')
+
+model_mets_fix = model_metabolites %>% 
+  mutate(comp = str_sub(met_id, start = -3, end = -2),
+         met_id = str_sub(met_id, start = 1, end = -5),
+         model = str_sub(model, start = 1, end = -5)
+    ) %>% 
+  mutate(met_name = str_replace_all(met_name, '-c0', ''),
+         met_name = str_replace_all(met_name, '-p0', ''),
+         met_name = str_replace_all(met_name, '-e0', ''))
+
+write_csv(model_mets_fix, '../model_metabolites.csv')
 
 # model description -------------------------------------------------------
 
