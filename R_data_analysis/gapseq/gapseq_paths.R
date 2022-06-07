@@ -336,13 +336,171 @@ mets_matrix = mets_pa %>%
 
 rownames(mets_matrix) = gnm_names
 
+### reduce the matrix ####
+# total genomes
+tot_gnms = dim(mets_matrix)[1]
+
+# filter the paths that are NOT 100% complete in at least 99% of genomes
+# (core pathway)
+redux_matrix = mets_matrix[,colSums(mets_matrix) < tot_gnms*0.99]
+dim(redux_matrix)
+
+# save the variables for the PCA later
+metab_ext_matrix = mets_matrix
+metab_ext_redux_matrix = redux_matrix
+
 
 col_fun = colorRamp2(c(0, 1), c("white", "#0949AB"))
 
-Heatmap(mets_matrix, 
+Heatmap(metab_ext_matrix, 
         col = col_fun,
         name = "Presence")
 
 
+
 quartz.save(file = '../exploration/Metabs_ext_heatmap.pdf',
             type = 'pdf', height = 80, width = 30)
+
+
+
+Heatmap(redux_matrix, 
+        col = col_fun,
+        name = "Presence",
+        show_row_names = F)
+
+
+quartz.save(file = '../exploration/Metabs_ext_redux_nonames_heatmap.pdf',
+            type = 'pdf', height = 7, width = 8)
+
+
+## cytoplasm metabs ####
+
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'c0') %>% 
+  mutate(val = 1) %>% 
+  ggplot(aes(met_name, model, fill = val)) +
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 90))
+
+
+# complexHeatmap
+mets_pa = metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'c0') %>% 
+  select(met_name, model) %>% 
+  mutate(presence = 1) %>% 
+  pivot_wider(names_from = met_name, values_from = presence,
+              values_fn = mean, values_fill = 0)
+
+mets_names = names(mets_pa)
+gnm_names = mets_pa$model
+
+mets_matrix = mets_pa %>% 
+  select(-model) %>% 
+  as.matrix() 
+
+rownames(mets_matrix) = gnm_names
+
+### reduce the matrix ####
+# total genomes
+tot_gnms = dim(mets_matrix)[1]
+
+# filter the paths that are NOT 100% complete in at least 99% of genomes
+# (core pathway)
+redux_matrix = mets_matrix[,colSums(mets_matrix) < tot_gnms*0.99]
+dim(redux_matrix)
+
+# save the variables for the PCA later
+metab_cyto_matrix = mets_matrix
+metab_cyto_redux_matrix = redux_matrix
+
+col_fun = colorRamp2(c(0, 1), c("white", "#0949AB"))
+
+Heatmap(redux_matrix, 
+        col = col_fun,
+        name = "Presence")
+
+
+quartz.save(file = '../exploration/Metabs_cytop_heatmap.pdf',
+            type = 'pdf', height = 80, width = 100)
+
+
+
+# PCA of metabolites ------------------------------------------------------
+
+library(broom)
+
+
+# External mets
+# metab_ext_matrix
+# metab_ext_redux_matrix
+
+## ext metabolites ####
+
+pca_fit = metab_cyto_matrix %>% 
+  as.data.frame() %>% 
+  select(where(is.numeric)) %>% 
+  prcomp(scale = F)
+
+pca_fit %>%
+  augment(redux_matrix) %>% # add original dataset back in
+  rename(Genome = `.rownames`) %>% 
+  select(Genome,`.fittedPC1`:`.fittedPC5`) %>% 
+  left_join(meta_filt) %>% 
+  filter(!(phylogroup %in% c('E or cladeI', 'cladeI'))) %>% 
+  # filter(phylogroup != 'B2') %>% 
+  ggplot(aes(.fittedPC1, .fittedPC3, 
+             color = phylogroup, fill = phylogroup)) + 
+  geom_point(size = 1.5) +
+  # ylim(-2,2) +
+  theme_half_open(12) + 
+  labs(
+    x = 'PC1',
+    y = 'PC3',
+    caption = ''
+    ) +
+  stat_ellipse(level=0.95, geom = 'polygon', alpha = 0.3) +
+  background_grid()
+
+ggsave("../exploration/PCA_ext_mets_PC1_PC3.pdf", height = 7, width = 9)
+
+
+## cyto metabolites ####
+
+# cytoplasm mets
+# metab_cyto_matrix
+# metab_cyto_redux_matrix
+
+
+pca_fit = metab_cyto_redux_matrix %>% 
+  as.data.frame() %>% 
+  select(where(is.numeric)) %>% 
+  prcomp(scale = F)
+
+pca_fit %>%
+  augment(redux_matrix) %>% # add original dataset back in
+  rename(Genome = `.rownames`) %>% 
+  select(Genome,`.fittedPC1`:`.fittedPC5`) %>% 
+  left_join(meta_filt) %>% 
+  filter(!(phylogroup %in% c('E or cladeI', 'cladeI'))) %>% 
+  # filter(phylogroup != 'B2') %>% 
+  ggplot(aes(.fittedPC1, .fittedPC2, 
+             color = phylogroup, fill = phylogroup)) + 
+  geom_point(size = 1.5) +
+  # ylim(-2,2) +
+  theme_half_open(12) + 
+  labs(
+    x = 'PC1',
+    y = 'PC2',
+    caption = ''
+  ) +
+  stat_ellipse(level=0.95, geom = 'polygon', alpha = 0.3) +
+  background_grid()
+
+ggsave("../exploration/PCA_cyto_mets.pdf", height = 7, width = 9)
+
+
+
+
+
