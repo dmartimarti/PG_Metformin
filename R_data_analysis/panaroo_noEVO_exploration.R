@@ -200,7 +200,7 @@ manhplot.lrt = function(data, limit = 3, unk = TRUE) {
     geom_hline(yintercept = c(0,limit)) +
     geom_text_repel(aes(label = labels), box.padding = 1.1,
                     max.overlaps = 100) +
-    theme_classic() +
+    theme_cowplot(15) +
     theme(
       axis.text.x=element_blank(),
       axis.ticks.x=element_blank())
@@ -242,7 +242,7 @@ manhplot.pval = function(data, limit = 6, unk = TRUE) {
     geom_hline(yintercept = c(0,limit)) +
     geom_text_repel(aes(label = labels), box.padding = 1.1,
                     max.overlaps = 100) +
-    theme_classic() +
+    theme_cowplot(15) +
     theme(
       axis.text.x=element_blank(),
       axis.ticks.x=element_blank())
@@ -253,7 +253,7 @@ manhplot.pval = function(data, limit = 6, unk = TRUE) {
 ### lrt ####
 # ALL
 
-manhplot.lrt(all_nobio, limit = 3, unk = F)
+manhplot.lrt(all_nobio, limit = 3, unk = F) 
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'manhattan_pyseer_lrt_all_nobio.pdf'),
@@ -309,11 +309,11 @@ dev.copy2pdf(device = cairo_pdf,
 ### pval ####
 # ALL
 
-manhplot.pval(all_nobio, limit = 6, unk = F)
+manhplot.pval(all_nobio, limit = 5, unk = F)
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'manhattan_pyseer_pval_all_nobio.pdf'),
-             height = 10, width = 14, useDingbats = FALSE)
+             height = 7, width = 10, useDingbats = FALSE)
 
 
 manhplot.pval(all_worm, limit = 6, unk = F)
