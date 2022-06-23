@@ -10,6 +10,10 @@ library(here)
 library(ComplexHeatmap)
 library(circlize)
 library(broom)
+library(ggsankey)
+# install.packages("vcd")
+library(vcd)
+
 
 theme_set(theme_cowplot(15))
 
@@ -758,8 +762,6 @@ quartz.save(file = '../exploration/chisq_plots/mosaicplot_diff_paths.pdf',
             type = 'pdf', height = 18, width = 16)
 
 
-# install.packages("vcd")
-library("vcd")
 # plot just a subset of the table
 assoc(dt, shade = TRUE, 
       las=1,
@@ -797,23 +799,8 @@ corrplot::corrplot(contrib[rowSums(abs(contrib)) > 1.5,], is.cor = FALSE)
 
 
 # Sankey diagram ####
-## test ####
 
-library(ggsankey)
-
-df = mtcars %>%
-  make_long(cyl, vs, am, gear, carb)
-
-
-ggplot(df, aes(x = x, 
-               next_x = next_x, 
-               node = node, 
-               next_node = next_node,
-               fill = factor(node))) +
-  geom_sankey() +
-  theme_sankey(base_size = 16)
-
-### tutorial 2 ####
+## pathways data ####
 
 # Create data which can be used for Sankey
 set.seed(111)
@@ -827,6 +814,7 @@ d = genome_paths %>%
   mutate(phylogroup = case_when(phylogroup == 'E or cladeI' ~ 'E',
                                 TRUE ~ phylogroup)) %>% 
   select(Name, phylogroup) %>% 
+  # filter(Name == 'curcumin degradation')
   filter(Name %in% test_paths)
 
 
@@ -837,7 +825,8 @@ df <- d %>%
 df
 
 # general chart
-ggplot(df, aes(x = x, 
+df %>% 
+ggplot(aes(x = x, 
                next_x = next_x, 
                node = node, 
                next_node = next_node, 
@@ -858,7 +847,7 @@ ggplot(df, aes(x = x,
   scale_fill_viridis_d(option = "inferno")+
   labs(fill = 'Nodes')
 
-quartz.save(file = '../exploration/chisq_plots/sankey_test.pdf',
+quartz.save(file = '../exploration/chisq_plots/sankey_curcumin.pdf',
             type = 'pdf', height = 6, width = 7)
 
 # highlight nodes
