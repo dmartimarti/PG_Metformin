@@ -9,7 +9,7 @@ library(cowplot)
 library(here)
 library(ComplexHeatmap)
 library(circlize)
-
+library(broom)
 
 theme_set(theme_cowplot(15))
 
@@ -38,11 +38,79 @@ for (i in 1:length(gnm_names)){
   genome_paths = bind_rows(genome_paths, temp)
 }
 
+genome_paths %>% 
+  distinct(ID, .keep_all = TRUE) %>% view
 
-# load metadata 
+
+genome_paths %>% 
+  filter(ID == '|12DICHLORETHDEG-PWY|') %>% View
+
+# Metadatas ####
+## genome metadata  ####
 
 library(readxl)
-metadata = read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx")
+metadata = read_excel("~/Documents/MRC_postdoc/Pangenomic/metadata/MAIN_metadata.xlsx") %>% 
+  mutate(Genome = str_sub(fasta, end = -7), .before = Strainname) %>% 
+  filter(Genome %in% gnm_names) %>% 
+  filter(phylogroup != 'cladeI') %>% 
+  distinct(Genome, .keep_all = TRUE)
+
+## pathways-reactions metadata ####
+
+metacyc_paths = read_delim("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/gapseq/All-reactions-of-MetaCyc_extended.txt", 
+                           delim = "\t", escape_double = FALSE, 
+                           trim_ws = TRUE) %>% 
+  rename(ec_number = `EC-Number`,
+         ID = `Object ID`,
+         reaction = Reaction,
+         substrates = `Substrates`,
+         common_name = `Common-Name`,
+         names = Names,
+         spontaneous = `Spontaneous?`,
+         systematic_name= `Systematic-Name`,
+         pathway = `In-Pathway`)
+
+
+pan_reactions = genome_paths %>% 
+  arrange(desc(Completeness)) %>% 
+  distinct(ID, .keep_all = T) %>% 
+  separate_rows(ReactionsFound, sep = ' ') %>% 
+  distinct(ReactionsFound) %>% 
+  pull(ReactionsFound)
+
+metacyc_paths_pangenome = metacyc_paths %>% 
+  filter(reaction %in% pan_reactions)  %>% 
+  separate_rows(substrates, 
+                sep = ' // ') %>% 
+  rename(met_name = substrates)
+
+
+## ModelSeed comps ####
+
+modelSeed_reactions = read_delim("https://raw.githubusercontent.com/ModelSEED/ModelSEEDDatabase/master/Biochemistry/reactions.tsv", 
+           delim = "\t", escape_double = FALSE, 
+           trim_ws = TRUE)
+
+
+modelSeed_comps = read_delim("https://raw.githubusercontent.com/ModelSEED/ModelSEEDDatabase/master/Biochemistry/compounds.tsv", 
+                                 delim = "\t", escape_double = FALSE, 
+                                 trim_ws = TRUE)
+
+
+
+# prepare the reactions dataset
+modelSeed_reac_pan = modelSeed_reactions %>% 
+  separate_rows(aliases, sep = '\\|') %>% 
+  filter(str_detect(aliases, 'MetaCyc:')) %>% 
+  mutate(aliases = str_sub(aliases, start = 10)) %>% 
+  filter(aliases %in% pan_reactions) %>% 
+  select(-notes, -source) 
+
+
+modelSeed_reac_pan %>% 
+  separate_rows(compound_ids, sep = ';')
+
+
 
 
 # how many genomes are we lacking ? 
@@ -108,6 +176,48 @@ genome_paths %>%
   )
 ggsave("../exploration/number_of_paths_all.pdf", height = 7, width = 9)
 
+## paths per phylogroup ####
+# distinct paths per phylogroup
+
+genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  select(Name, Genome) %>% 
+  left_join(meta_filt %>% 
+              select(Genome, phylogroup)) %>% 
+  group_by(Genome, phylogroup) %>% 
+  count() %>% 
+  filter(n > 400) %>%
+  ggplot(aes(n, fill = phylogroup
+             )) +
+  geom_histogram(color = 'black', bins = 30) +
+  labs(
+    x = 'Number of pathways in genome',
+    y = 'Number of genomes'
+  )
+ 
+ggsave("../exploration/number_of_paths_phylogroups.pdf", height = 7, width = 9)
+
+genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  select(Name, Genome) %>% 
+  left_join(meta_filt %>% 
+              select(Genome, phylogroup)) %>% 
+  group_by(Genome, phylogroup) %>% 
+  filter(phylogroup != 'cladeI') %>% 
+  count() %>% 
+  filter(n > 400) %>%
+  ggplot(aes(n, fill = phylogroup
+  )) +
+  geom_density(color = 'black', alpha = 0.9) +
+  labs(
+    x = 'Number of pathways in genome',
+    y = 'Number of genomes'
+  ) + 
+  facet_wrap(~phylogroup, ncol = 1)
+
+ggsave("../exploration/paths_density_phylogroups.pdf", height = 12, width = 6)
+
+# pathways heatmaps ####
 ## complete paths matrix ####
 paths_pa = genome_paths %>% 
   filter(Completeness == 100) %>% 
@@ -171,6 +281,8 @@ tot_gnms = dim(paths_matrix)[1]
 redux_matrix = paths_matrix[,colSums(paths_matrix) < tot_gnms*0.99]
 dim(redux_matrix)
 
+### differnetial pathways ####
+diff_pathways = colnames(redux_matrix)
 
 col_fun = colorRamp2(c(0, 1), c("white", "#0949AB"))
 Heatmap(redux_matrix, 
@@ -274,6 +386,20 @@ metab %>%
   geom_tile() +
   theme(axis.text.x = element_text(angle = 90))
 
+
+# generate a table with the differntial metabolites
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'p0') %>% 
+  select(met_name, model) %>% 
+  mutate(presence = 1) %>% 
+  count(met_name) %>% 
+  arrange(n) %>% 
+  # filter(n < ((736 * 0.1))) %>% 
+  write_csv('../exploration/tables/metabs_periplasm.csv')
+
+metacyc_paths_pangenome
+
 # complexHeatmap
 mets_pa = metab %>% 
   filter(model %in% gnm_valid) %>% 
@@ -316,6 +442,27 @@ metab %>%
   ggplot(aes(met_name, model, fill = val)) +
   geom_tile() +
   theme(axis.text.x = element_text(angle = 90))
+
+# generate a table with the differntial metabolites
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'e0') %>%
+  group_by(met_id) %>% 
+  count(met_name) %>% 
+  arrange(n) %>% 
+  write_csv('../exploration/tables/metabs_ext.csv')
+
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'e0') %>% 
+  select(met_name, model) %>% 
+  mutate(presence = 1) %>% 
+  count(met_name) %>% 
+  arrange(n) %>% 
+  full_join(metacyc_paths_pangenome) %>% 
+  write_csv('../exploration/tables/metabs_ext_descriptions.csv')
+
+
 
 
 # complexHeatmap
@@ -383,6 +530,30 @@ metab %>%
   geom_tile() +
   theme(axis.text.x = element_text(angle = 90))
 
+
+# generate a table with the differential metabolites
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'c0') %>%
+  group_by(met_id) %>% 
+  count(met_name) %>% 
+  ungroup %>% 
+  arrange(n) %>% 
+  write_csv('../exploration/tables/metabs_cyt.csv')
+
+
+metab %>% 
+  filter(model %in% gnm_valid) %>% 
+  filter(comp == 'c0') %>% 
+  select(met_name, model) %>% 
+  mutate(presence = 1) %>% 
+  count(met_name) %>% 
+  arrange(n) %>% 
+  full_join(metacyc_paths_pangenome) %>% 
+  # filter(n < ((736 * 0.1))) %>% 
+  write_csv('../exploration/tables/metabs_cyt_description.csv')
+
+  
 
 # complexHeatmap
 mets_pa = metab %>% 
@@ -499,6 +670,275 @@ pca_fit %>%
   background_grid()
 
 ggsave("../exploration/PCA_cyto_mets.pdf", height = 7, width = 9)
+
+
+
+
+
+
+
+# Chi-square test ---------------------------------------------------------
+
+# prepare the matrix
+chi_sq_matrix = genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  # filter(Name %in% diff_pathways) %>%  ## filter the pathways that seem to be different
+  left_join(metadata %>% 
+              select(Genome, phylogroup)) %>%
+  drop_na(phylogroup) %>% 
+  mutate(phylogroup = case_when(phylogroup == 'E or cladeI' ~ 'E',
+                                TRUE ~ phylogroup)) %>% 
+  group_by(Name, phylogroup) %>% 
+  count() %>% 
+  pivot_wider(names_from = phylogroup, values_from = n, values_fill = 0)
+
+
+pahts_names = chi_sq_matrix$Name
+
+chi_sq_matrix = chi_sq_matrix %>% 
+  ungroup %>% 
+  select(-Name) %>% 
+  as.data.frame() 
+
+rownames(chi_sq_matrix) = pahts_names
+
+
+# convert to table
+dt = as.table(as.matrix(chi_sq_matrix))
+
+
+
+## test table with 5 pathways ####
+
+test_paths = c('ATP biosynthesis', 'isoniazid activation', # present in all
+               'Agmatine Transport', 'mannitol cycle', # present in all
+               'homotaurine degradation', 'acetoin degradation', # present in all
+               'curcumin degradation', 'maltose degradation', # present in a few
+               'salmochelin degradation', 'salmochelin biosynthesis') # present in a few
+
+test_dt = dt[test_paths,]
+
+assoc(test_dt, shade = TRUE, las=1,
+      labeling_args = list(
+        offset_labels = c(left = -4),
+        offset_varnames = c(left = 0),
+        rot_labels = c(left = 0)))
+
+quartz.save(file = '../exploration/chisq_plots/assoc_test.pdf',
+            type = 'pdf', height = 10, width = 7)
+
+
+mosaicplot(test_dt , shade = TRUE, las=2,
+           cex.axis = 01,
+           main = "sdlfakjsd")
+
+
+chisq = chisq.test(test_dt)
+
+chisq$observed
+
+round(chisq$expected,2)
+round(chisq$residuals,3)
+
+corrplot::corrplot(chisq$residuals, is.cor = FALSE)
+
+
+# contribution 
+contrib <- 100*chisq$residuals^2/chisq$statistic
+round(contrib, 3)
+corrplot::corrplot(contrib, is.cor = FALSE)
+
+## complete dataset
+
+mosaicplot(t(head(dt,20)), shade = TRUE, las=2,
+           cex.axis = 01,
+           main = "sdlfakjsd")
+
+quartz.save(file = '../exploration/chisq_plots/mosaicplot_diff_paths.pdf',
+            type = 'pdf', height = 18, width = 16)
+
+
+# install.packages("vcd")
+library("vcd")
+# plot just a subset of the table
+assoc(dt, shade = TRUE, 
+      las=1,
+      labeling_args = list(
+        offset_labels = c(left = -4),
+        offset_varnames = c(left = 0),
+        rot_labels = c(left = 0)))
+
+quartz.save(file = '../exploration/chisq_plots/assoc_all.pdf',
+            type = 'pdf', height = 120, width = 12)
+
+## chi sq test ####
+chisq = chisq.test(dt)
+
+chisq$observed
+
+round(chisq$expected,2)
+residuals = round(chisq$residuals,3)
+
+
+
+
+
+corrplot::corrplot(residuals[rowSums(abs(residuals)) >15,], 
+                   is.cor = FALSE,
+                   tl.cex = 0.3)
+
+quartz.save(file = '../exploration/chisq_plots/residuals_15.pdf',
+            type = 'pdf', height = 10, width = 5)
+
+# contribution 
+contrib <- 100*chisq$residuals^2/chisq$statistic
+round(contrib, 3)
+corrplot::corrplot(contrib[rowSums(abs(contrib)) > 1.5,], is.cor = FALSE)
+
+
+# Sankey diagram ####
+## test ####
+
+library(ggsankey)
+
+df = mtcars %>%
+  make_long(cyl, vs, am, gear, carb)
+
+
+ggplot(df, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node))) +
+  geom_sankey() +
+  theme_sankey(base_size = 16)
+
+### tutorial 2 ####
+
+# Create data which can be used for Sankey
+set.seed(111)
+
+d = genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  # filter(Name %in% diff_pathways) %>%  ## filter the pathways that seem to be different
+  left_join(metadata %>% 
+              select(Genome, phylogroup)) %>%
+  drop_na(phylogroup) %>% 
+  mutate(phylogroup = case_when(phylogroup == 'E or cladeI' ~ 'E',
+                                TRUE ~ phylogroup)) %>% 
+  select(Name, phylogroup) %>% 
+  filter(Name %in% test_paths)
+
+
+# Step 1
+
+df <- d %>%
+  make_long(Name, phylogroup)
+df
+
+# general chart
+ggplot(df, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node, 
+               fill = factor(node), 
+               label = node)) + 
+  geom_sankey(flow.alpha = 0.5, 
+              node.color = "black",
+              show.legend = FALSE) +
+  geom_sankey_label(size = 3, 
+                    color = "black", 
+                    fill= "white", hjust = -0.3) +
+  theme_bw() +  
+  theme(legend.position = "none") + 
+  theme(axis.title = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.ticks = element_blank(), 
+        panel.grid = element_blank())+
+  scale_fill_viridis_d(option = "inferno")+
+  labs(fill = 'Nodes')
+
+quartz.save(file = '../exploration/chisq_plots/sankey_test.pdf',
+            type = 'pdf', height = 6, width = 7)
+
+# highlight nodes
+ggplot(df, aes(x = x
+               , next_x = next_x
+               , node = node
+               , next_node = next_node
+               , fill = factor(node)
+               , label = node)) + 
+  geom_sankey(flow.alpha = 0.5, 
+              node.color = "black",
+              show.legend = FALSE) +
+  geom_sankey_label(size = 3, 
+                    color = "black", 
+                    fill= "white", 
+                    hjust = -0.3) +
+  theme_bw()+  
+  theme(legend.position = "none") + 
+  theme(axis.title = element_blank()
+        , axis.text.y = element_blank()
+        , axis.ticks = element_blank()  
+        , panel.grid = element_blank())+
+  # scale_fill_viridis_d(option = "inferno")+
+  scale_fill_manual(values = c('curcumin degradation' = "red"
+                               # , 'B2'  = "#31C9F7"
+                               
+  ) ) +
+  labs(fill = 'Nodes')
+
+
+quartz.save(file = '../exploration/chisq_plots/sankey_test_highlight.pdf',
+            type = 'pdf', height = 6, width = 7)
+
+### test 1 ####
+test = dt[test_paths,] %>% 
+  data.frame() %>% 
+  pivot_wider(names_from = Var2, values_from = Freq) %>% 
+  as.data.frame
+
+test[,1] = NULL
+
+rownames(test) = test_paths
+
+
+df = test %>% 
+  make_long(A:G) 
+
+ggplot(df, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75, node.color = 1) +
+  scale_fill_viridis_d(option = "A", alpha = 0.95) +
+  geom_sankey_label(size = 3.5, color = 1, fill = "white") +
+  theme_sankey(base_size = 16) +
+  theme(legend.position = "none")
+
+
+### test 2 ####
+
+test = dt[test_paths,] %>% 
+  data.frame() %>% 
+  rename(paths = Var1, phylo = Var2)
+
+df = test %>% 
+  make_long(paths,phylo, Freq) 
+
+ggplot(df, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node),
+               label = node)) +
+  geom_sankey(flow.alpha = 0.75, node.color = 1) +
+  scale_fill_viridis_d(option = "A", alpha = 0.95) +
+  geom_sankey_label(size = 3.5, color = 1, fill = "white") +
+  theme_sankey(base_size = 16) +
+  theme(legend.position = "none")
 
 
 
