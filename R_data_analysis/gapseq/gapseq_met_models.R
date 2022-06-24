@@ -190,6 +190,75 @@ upt = uptReact(ex)
 
 ex[upt]
 
+
+# genome coverage ---------------------------------------------------------
+
+# let's try to calculate the genome coverage of these models
+
+# start with an example
+tibble(
+  genes = b1@genes,
+  rxn = b1@react_attr$rxn,
+  start = b1@react_attr$sstart,
+  end = b1@react_attr$send,
+  status = b1@react_attr$status
+) %>% 
+  drop_na(start, end) %>% 
+  mutate(diff = end-start,
+         direction = diff / abs(diff)) 
+
+
+
+genes_size  = tibble()
+for (model in files_list) {
+  
+  cat(glue::glue('Reading model {model}\n\n'))
+  
+  temp_model = readRDS(model)
+  
+  temp_df = tibble(
+    genes = temp_model@genes,
+    rxn = temp_model@react_attr$rxn,
+    start = temp_model@react_attr$sstart,
+    end = temp_model@react_attr$send,
+    status = temp_model@react_attr$status
+  ) %>% 
+    drop_na(start, end) %>% 
+    mutate(diff = end-start,
+           direction = diff / abs(diff)) %>% 
+    mutate(Genome = model, .before = genes)
+  
+  genes_size = genes_size %>% bind_rows(temp_df)
+}
+
+
+genes_size = genes_size %>% 
+  mutate(Genome = str_sub(Genome, start = 1, end = -5))
+
+
+genes_size %>% 
+  group_by(Genome) %>% 
+  summarise(size = sum(abs(diff))) %>% 
+  filter(size > 3.2e+06) %>% # there are a few outliers
+  ggplot(aes(x = size)) +
+  geom_histogram(color = 'black',
+                 fill = c("#2D51C4"),
+                 alpha = 0.9) + 
+  labs(
+    x = 'Gene size sum',
+    y = 'Count'
+  ) +
+  theme_cowplot(15)
+
+ggsave('../exploration/genome_coverage.pdf',
+       height = 4, width = 6)
+
+
+
+
+
+
+
 # BacArena ----------------------------------------------------------------
 
 
