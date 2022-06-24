@@ -203,9 +203,9 @@ tibble(
   end = b1@react_attr$send,
   status = b1@react_attr$status
 ) %>% 
-  drop_na(start, end) %>% 
+  # drop_na(start, end) %>% 
   mutate(diff = end-start,
-         direction = diff / abs(diff)) 
+         direction = diff / abs(diff)) %>% view
 
 
 
@@ -255,8 +255,51 @@ ggsave('../exploration/genome_coverage.pdf',
 
 
 
+## compare with real genome size ####
 
 
+# Windows = "D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv"
+# Mac = "~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv"
+genome_info = read_delim("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv", 
+                         delim = "\t", escape_double = FALSE, 
+                         col_types = cols(Assembly = col_character()), 
+                         trim_ws = TRUE) %>% 
+  rename(genome = Assembly,
+         genome_length = `Total length (>= 0 bp)`,
+         genome_length_500 =`Total length`,
+         gc_content = `GC (%)`) %>% 
+  select(Genome = genome, genome_length, genome_length_500, gc_content)
+
+
+genome_size_comp = genes_size %>% 
+  group_by(Genome) %>% 
+  summarise(size = sum(abs(diff))) %>% 
+  left_join(genome_info) %>% 
+  # head(., 14) %>% 
+  select(Genome,Metab_model_size=size, Genome_length= genome_length) %>% 
+  mutate(Genome_diff = Genome_length - Metab_model_size) %>% 
+  select(-Genome_length) %>% 
+  pivot_longer(cols = Metab_model_size:Genome_diff,
+               names_to = 'Fraction', 
+               values_to = 'length')
+
+
+
+genome_size_comp %>% 
+  ggplot(aes(fill = Fraction, y = fct_reorder( Genome, length), x = length)) +
+  geom_bar(position = 'stack', stat = 'identity') +
+  labs(x = 'Length',
+       y = 'Genomes') +
+  scale_fill_manual(name = NULL, 
+                     # breaks = c(1,2),
+                     values = c('#1283FA', '#AD6E00'),
+                     labels = c("Total genome size",
+                                "Genome covered")) +
+  theme(axis.text.y = element_blank())
+
+
+ggsave('../exploration/genome_coverage_genomeSize.pdf',
+       height = 4, width = 6)
 
 
 # BacArena ----------------------------------------------------------------
