@@ -13,6 +13,8 @@ library(broom)
 library(ggsankey)
 # install.packages("vcd")
 library(vcd)
+library(glue)
+library(openxlsx)
 
 
 theme_set(theme_cowplot(15))
@@ -847,7 +849,7 @@ ggplot(aes(x = x,
   scale_fill_viridis_d(option = "inferno")+
   labs(fill = 'Nodes')
 
-quartz.save(file = '../exploration/chisq_plots/sankey_curcumin.pdf',
+quartz.save(file = '../exploration/chisq_plots/sankey_test.pdf',
             type = 'pdf', height = 6, width = 7)
 
 # highlight nodes
@@ -881,54 +883,88 @@ ggplot(df, aes(x = x
 quartz.save(file = '../exploration/chisq_plots/sankey_test_highlight.pdf',
             type = 'pdf', height = 6, width = 7)
 
-### test 1 ####
-test = dt[test_paths,] %>% 
-  data.frame() %>% 
-  pivot_wider(names_from = Var2, values_from = Freq) %>% 
-  as.data.frame
-
-test[,1] = NULL
-
-rownames(test) = test_paths
 
 
-df = test %>% 
-  make_long(A:G) 
+# create a function that plots a sankey diagram of a selected pathway
+plotSankey = function(db, pathway, save.plot = TRUE){
 
-ggplot(df, aes(x = x, 
-               next_x = next_x, 
-               node = node, 
-               next_node = next_node,
-               fill = factor(node),
-               label = node)) +
-  geom_sankey(flow.alpha = 0.75, node.color = 1) +
-  scale_fill_viridis_d(option = "A", alpha = 0.95) +
-  geom_sankey_label(size = 3.5, color = 1, fill = "white") +
-  theme_sankey(base_size = 16) +
-  theme(legend.position = "none")
+  # filter the database for the pathway
+  db_pathway = db %>% 
+    filter(Name == pathway) %>% 
+    make_long(Name, phylogroup)
+  # plot the sankey diagram
+  p = ggplot(db_pathway, aes(x = x
+                         , next_x = next_x
+                         , node = node
+                         , next_node = next_node
+                         , fill = factor(node)
+                         , label = node)) + 
+    geom_sankey(flow.alpha = 0.5, 
+                node.color = "black",
+                show.legend = FALSE) +
+    geom_sankey_label(size = 3, 
+                      color = "black", 
+                      fill= "white", hjust = -0.3) +
+    theme_bw() +  
+    theme(legend.position = "none") + 
+    theme(axis.title = element_blank(), 
+          axis.text.y = element_blank(), 
+          axis.ticks = element_blank(), 
+          panel.grid = element_blank())+
+    scale_fill_viridis_d(option = "inferno")+
+    labs(fill = 'Nodes')
+  if (save.plot == TRUE){
+    # save the plot with the glue function
+    ggsave(file = glue('../exploration/chisq_plots/sankey_individuals/sankey_{pathway}.pdf'),
+           height = 6, width = 7)
+  } 
+  return(p)
+}
+
+db_sankey = genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  # filter(Name %in% diff_pathways) %>%  ## filter the pathways that seem to be different
+  left_join(metadata %>% 
+              select(Genome, phylogroup)) %>%
+  drop_na(phylogroup) %>% 
+  mutate(phylogroup = case_when(phylogroup == 'E or cladeI' ~ 'E',
+                                TRUE ~ phylogroup)) 
+
+plotSankey(db_sankey, 'D-erythronate degradation I')
+
+# remove a problematic name
+diff_paths_sankey = diff_pathways[diff_pathways != "coenzyme B/coenzyme M regeneration I (methanophenazine-dependent)"]
 
 
-### test 2 ####
+for (path in diff_paths_sankey){
+  cat(glue('Printing {path} pathway\n\n'))
+  plotSankey(db_sankey, path)
+}
 
-test = dt[test_paths,] %>% 
-  data.frame() %>% 
-  rename(paths = Var1, phylo = Var2)
 
-df = test %>% 
-  make_long(paths,phylo, Freq) 
+plotSankey(db_sankey, 'L-arabinose degradation II', save.plot = F)
 
-ggplot(df, aes(x = x, 
-               next_x = next_x, 
-               node = node, 
-               next_node = next_node,
-               fill = factor(node),
-               label = node)) +
-  geom_sankey(flow.alpha = 0.75, node.color = 1) +
-  scale_fill_viridis_d(option = "A", alpha = 0.95) +
-  geom_sankey_label(size = 3.5, color = 1, fill = "white") +
-  theme_sankey(base_size = 16) +
-  theme(legend.position = "none")
+db_pathway = db_sankey %>% 
+  filter(Name == 'curcumin degradation') %>% 
+  make_long(Name, phylogroup)
 
+
+
+# get pathway PA list in a file ####
+
+genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  select(Name, Genome) %>% 
+  mutate(presence = 1) %>% 
+  pivot_wider(names_from = Name, values_from = presence, values_fill = 0) %>% 
+  left_join(metadata %>% 
+              select(Genome, phylogroup, Well, PG)) %>% 
+  select(Genome, phylogroup:PG, everything()) %>% 
+  pivot_longer(cols = `folate transformations III (E. coli)`:`L-arabinose degradation II`,
+               names_to = 'Pathway', values_to = 'Presence') %>% 
+  mutate(`Is different?` = case_when(Pathway %in% diff_pathways ~ 'Yes',
+                                     TRUE ~ 'No')) %>% 
+  write.xlsx('../exploration/tables/pathway_PA_metadata.xlsx')
 
 
 
