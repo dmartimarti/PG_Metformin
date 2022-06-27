@@ -207,46 +207,128 @@ tibble(
   mutate(diff = end-start,
          direction = diff / abs(diff)) %>% view
 
+## parallel version of data gathering ####
+# parallel version of the loop, much faster
+library(foreach)
+library(doParallel)
+
+# create the cluster
+n.cores <- parallel::detectCores() - 1
+my.cluster <- parallel::makeCluster(
+  n.cores,
+  type = "FORK"
+)
+
+# register it to be used by %dopar%
+doParallel::registerDoParallel(cl = my.cluster)
+
+# check if it is registered (optional)
+foreach::getDoParRegistered()
+print(my.cluster)
 
 
-genes_size  = tibble()
-for (model in files_list) {
+genes_size = foreach(i = 1:length(files_list),
+        .packages=c("tidyverse"),
+        .combine = 'rbind'
+        ) %dopar% {
+
+          # cat(glue::glue('Reading model {files_list[i]}\n\n'))
+
+           temp_model = readRDS(files_list[i])
+
+           temp_df = tibble(
+             genes = temp_model@genes,
+             rxn = temp_model@react_attr$rxn,
+             start = temp_model@react_attr$sstart,
+             end = temp_model@react_attr$send,
+             status = temp_model@react_attr$status
+           ) %>%
+             drop_na(start, end) %>%
+             mutate(diff = end-start,
+                    direction = diff / abs(diff)) %>%
+             mutate(Genome = files_list[i], .before = genes)
+
+         }
+
+stopCluster(my.cluster)
+
+
+# 
+# genes_size  = tibble()
+# for (model in files_list) {
+# 
+#   cat(glue::glue('Reading model {model}\n\n'))
+# 
+#   temp_model = readRDS(model)
+# 
+#   temp_df = tibble(
+#     genes = temp_model@genes,
+#     rxn = temp_model@react_attr$rxn,
+#     start = temp_model@react_attr$sstart,
+#     end = temp_model@react_attr$send,
+#     status = temp_model@react_attr$status
+#   ) %>%
+#     drop_na(start, end) %>%
+#     mutate(diff = end-start,
+#            direction = diff / abs(diff)) %>%
+#     mutate(Genome = model, .before = genes)
+# 
+#   genes_size = genes_size %>% bind_rows(temp_df)
+# }
+# 
+# 
+# genes_size = genes_size %>% 
+#   mutate(Genome = str_sub(Genome, start = 1, end = -5))
+
+
+# A VERY IMPORTANT STEP
+## 
+genes_size_expand = genes_size %>% 
+  # head(10000) %>%
+  drop_na(diff) %>% 
+  # filter(status != 'bad_blast') %>% 
+  # select(Genome, genes, rxn, status) %>% 
+  unnest(genes) %>% 
+  distinct(Genome, genes, rxn, status, .keep_all = T) %>%
+  # as genes are annotated at the end of the string, lets separate it
+  separate(genes, into = c('new_start', 'new_end'), sep = ':',remove = F) %>% 
+  # calculate new starts and ends. We'll need to fix the starts
+  mutate(new_start = str_extract(new_start, '\\d+$'),
+         new_start = as.numeric(new_start), # extracts the digits at the end of the string
+         new_end = as.numeric(new_end)) %>% 
+  mutate(new_diff = new_end - new_start,
+         new_direction = new_diff / abs(new_diff)) %>% 
+  mutate(new_diff = case_when(!is.na(new_diff) ~ new_diff,
+                              is.na(new_diff) ~ diff),
+         new_direction = case_when(!is.na(new_direction) ~ new_direction,
+                                   is.na(new_direction) ~ direction)) %>% 
+  select(Genome, genes, rxn,
+         start = new_start, end = new_end, 
+         diff = new_diff, direction = new_direction) 
   
-  cat(glue::glue('Reading model {model}\n\n'))
-  
-  temp_model = readRDS(model)
-  
-  temp_df = tibble(
-    genes = temp_model@genes,
-    rxn = temp_model@react_attr$rxn,
-    start = temp_model@react_attr$sstart,
-    end = temp_model@react_attr$send,
-    status = temp_model@react_attr$status
-  ) %>% 
-    drop_na(start, end) %>% 
-    mutate(diff = end-start,
-           direction = diff / abs(diff)) %>% 
-    mutate(Genome = model, .before = genes)
-  
-  genes_size = genes_size %>% bind_rows(temp_df)
-}
 
 
-genes_size = genes_size %>% 
-  mutate(Genome = str_sub(Genome, start = 1, end = -5))
+# THERE ARE DUPLICATED REACTIONS! WTH!!
+genes_size_expand %>% 
+  # distinct(Genome, genes, rxn, .keep_all = T) %>%
+  filter(rxn == 'ACETOOHBUTSYN-RXN') %>% 
+  filter(Genome == '1.2')
 
 
-genes_size %>% 
+
+genes_size_expand %>% 
   group_by(Genome) %>% 
   summarise(size = sum(abs(diff))) %>% 
-  filter(size > 3.2e+06) %>% # there are a few outliers
+  filter(size > 2.4e+06) %>% # there are a few outliers
+  filter(size < 3.7e+06) %>% 
   ggplot(aes(x = size)) +
   geom_histogram(color = 'black',
                  fill = c("#2D51C4"),
                  alpha = 0.9) + 
   labs(
     x = 'Gene size sum',
-    y = 'Count'
+    y = 'Count',
+    caption = 'Values under 2e+06 and over 3.7e+06 have been filtered'
   ) +
   theme_cowplot(15)
 
@@ -256,7 +338,7 @@ ggsave('../exploration/genome_coverage.pdf',
 
 
 ## compare with real genome size ####
-
+### absolute lengths ####
 
 # Windows = "D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv"
 # Mac = "~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/assemblies/no_evo/quast_quality/transposed_report.tsv"
@@ -271,7 +353,7 @@ genome_info = read_delim("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/
   select(Genome = genome, genome_length, genome_length_500, gc_content)
 
 
-genome_size_comp = genes_size %>% 
+genome_size_comp = genes_size_expand %>% 
   group_by(Genome) %>% 
   summarise(size = sum(abs(diff))) %>% 
   left_join(genome_info) %>% 
@@ -286,20 +368,75 @@ genome_size_comp = genes_size %>%
 
 
 genome_size_comp %>% 
+  filter(!(Genome %in% c('6', 'SPC_3.1', '2.3','OP50'))) %>% 
   ggplot(aes(fill = Fraction, y = fct_reorder( Genome, length), x = length)) +
-  geom_bar(position = 'stack', stat = 'identity') +
+  geom_bar(position = 'stack', stat = 'identity', width = 1) +
   labs(x = 'Length',
        y = 'Genomes') +
   scale_fill_manual(name = NULL, 
                      # breaks = c(1,2),
-                     values = c('#1283FA', '#AD6E00'),
+                    values = c('#1BCBFA', '#FFA90F'),
                      labels = c("Total genome size",
                                 "Genome covered")) +
-  theme(axis.text.y = element_blank())
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y=element_blank())
 
 
 ggsave('../exploration/genome_coverage_genomeSize.pdf',
        height = 4, width = 6)
+
+
+### percentage lengths ####
+
+genome_size_comp_per = genes_size_expand %>% 
+  group_by(Genome) %>% 
+  summarise(size = sum(abs(diff))) %>% 
+  left_join(genome_info) %>% 
+  # head(., 14) %>% 
+  select(Genome,Metab_model_size=size, Genome_length= genome_length) %>% 
+  mutate(perc_covered = (Metab_model_size / Genome_length) * 100,
+         perc_unc = 100 - perc_covered) %>% 
+  select(-Genome_length, -Metab_model_size) %>% 
+  arrange(desc(perc_covered)) %>% 
+  mutate(Genome = factor(Genome, levels = Genome)) %>% 
+  pivot_longer(cols = perc_covered:perc_unc,
+               names_to = 'Fraction', 
+               values_to = 'length') %>% 
+  filter(!(Genome %in% c('6', 'SPC_3.1', '2.3','OP50'))) 
+
+
+genome_size_comp_per %>% 
+  mutate(new_label = case_when(Genome == 'NT12001_189' & 
+                                 Fraction == 'perc_covered' ~ 'E. coli MG1655',
+                               TRUE ~ '')) %>% 
+  ggplot(aes(fill = factor(Fraction,
+                           levels = c('perc_unc','perc_covered')), 
+             y = Genome, x = length)) +
+  geom_bar(position = 'stack', stat = 'identity', width = 1) +
+  labs(x = '% covered by the metabolic model',
+       y = 'Genomes') +
+  ggrepel::geom_label_repel(aes(label = new_label),
+                            max.overlaps = Inf,
+                            box.padding = 0.4,
+                            size = 3,
+                            fill = 'white') +
+  scale_fill_manual(name = NULL,
+                    # breaks = c(1,2),
+                    values = c('#1BCBFA', '#FFA90F'),
+                    labels = c("Genome uncovered",
+                               "Genome covered")) +
+  scale_y_discrete(limits=rev) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y=element_blank())
+
+ggsave('../exploration/genome_coverage_genomeSize_percentage.pdf',
+       height = 4, width = 6)
+
+
+
+
+
+
 
 
 # BacArena ----------------------------------------------------------------
