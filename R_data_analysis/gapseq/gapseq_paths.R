@@ -969,3 +969,112 @@ genome_paths %>%
 
 
 
+
+
+
+# annotation by Prokka ----------------------------------------------------
+
+# this file hasb been created in the script and R Session from the folder
+# /Users/danmarti/Documents/MRC_postdoc/My_projects/pangenome_functions
+
+
+PG_annotation_prokka = read_csv("~/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/gapseq/PG_annotation_prokka.csv")
+
+
+unique(PG_annotation_prokka$genome)
+
+gff_count = PG_annotation_prokka %>% 
+  mutate(hypo = case_when(product == 'hypothetical protein' ~ 'hypothetical protein',
+                          TRUE ~ 'annotated')) %>% 
+  group_by(genome) %>% 
+  count(hypo)
+
+
+gff_count %>% 
+  filter(!(genome %in% c('6', 'SPC_3.1', '2.3','OP50'))) %>% 
+  # filter(hypo == 'annotated') %>% 
+  ggplot(aes(x = n, fill= hypo)) + 
+  geom_histogram(bins = 100, binwidth = 50) +
+  labs(
+    x = 'Genes',
+    y = 'Genome count'
+  ) +
+  scale_fill_manual(values = c('#FA9228', '#8558F0')) +
+  theme_cowplot(15) +
+  theme(legend.position = 'top',
+        legend.justification = "center") +
+  guides(fill = guide_legend(title='Category'))
+
+ggsave(here('../exploration', 'PG_annotation', 'annotated_genes_histogram.pdf'),
+       height = 7, width = 9)
+
+
+gff_count %>% 
+  filter(!(genome %in% c('6', 'SPC_3.1', '2.3','OP50'))) %>% 
+  ggplot(aes(y = fct_reorder(genome, n, .desc = T), x = n, fill = hypo)) +
+  geom_bar(position = 'stack', stat = 'identity', width = 1) +
+  labs(
+    x = 'Number of genes',
+    y = 'Genomes'
+  ) +
+  scale_fill_manual(values = c('#FA9228', '#8558F0'),
+                    labels = c('Annotated proteins',
+                               'Hypothetical protein')) +
+  scale_y_discrete(limits=rev) +
+  # scale_x_discrete(limits=rev) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+ggsave(here('../exploration', 'PG_annotation', 'annotated_genes_barplot.pdf'),
+       height = 7, width = 9)
+
+
+# most repeated genes
+
+PG_annotation_prokka %>% 
+  mutate(genome = str_sub(genome, end = -5)) %>% 
+  drop_na(gene) %>% 
+  filter(product != 'hypothetical protein') %>% 
+  count(gene, sort = TRUE) %>% 
+  ggplot(aes(x = n)) +
+  geom_bar(position = 'identity', width = 1) +
+  labs(
+    x = 'Genome count',
+    y = 'Gene count'
+  ) +
+  theme_cowplot(14)
+
+ggsave(here('../exploration', 'PG_annotation', 'annotated_genes_barplot.pdf'),
+       height = 7, width = 9)
+
+# gff_db %>% 
+#   dplyr::select(-value) %>% 
+#   mutate(genome = str_sub(genome, end = -5)) %>% 
+#   drop_na(gene) %>% 
+#   filter(product != 'hypothetical protein') %>% 
+#   separate(gene, into = c('gene', 'trash'), sep = '_') %>% 
+#   count(gene, sort = TRUE) %>% 
+#   ggplot(aes(x = n)) +
+#   geom_bar(position = 'identity', width = 1) +
+#   labs(
+#     x = 'Genome count',
+#     y = 'Gene count'
+#   ) +
+#   theme_cowplot(14)
+# 
+# 
+# 
+# cosa = gff_db %>% 
+#   dplyr::select(-value) %>% 
+#   mutate(genome = str_sub(genome, end = -5)) %>% 
+#   drop_na(gene) %>% 
+#   filter(product != 'hypothetical protein') %>% 
+#   separate(gene, into = c('gene', 'trash'), sep = '_') %>% 
+#   count(gene, sort = TRUE) 
+
+
+
+
+
+
+
