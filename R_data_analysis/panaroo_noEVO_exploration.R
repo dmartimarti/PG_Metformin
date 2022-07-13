@@ -846,3 +846,42 @@ fit$summary
 plot_pangenome_fits(fit, include_data = TRUE)
 
 
+
+
+# gene alignments ---------------------------------------------------------
+
+
+# remotes::install_github("YuLab-SMU/ggmsa")
+
+library(ggmsa)
+library(seqinr)
+library(Biostrings)
+
+protein_sequences <- system.file("extdata", "sample.fasta", package = "ggmsa")
+ggmsa(protein_sequences, start = 221, end = 280, char_width = 0.5, seq_name = T) + geom_seqlogo() + geom_msaBar()
+
+mdtB = read.alignment(here('gene_extract','aln','mdtB.aln'), format= 'fasta')
+
+
+system.file("/Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/gene_extract/aln/mdtB.aln",'mdtB.aln', 
+            "mdtB.aln", 
+            package = "ggmsa")
+
+
+ggmsa(mdtB, 
+      # start = 221, 
+      # end = 280, 
+      char_width = 0.5, 
+      seq_name = T) + 
+  geom_seqlogo() + 
+  geom_msaBar()
+
+
+
+
+
+
+
+
+
+
