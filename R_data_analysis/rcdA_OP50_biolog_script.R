@@ -9,6 +9,7 @@ library(gtools)
 library(openxlsx)
 library(here)
 library(ComplexHeatmap)
+library(rstatix)
 
 #this sets up the plot theme, I hate the default grey background from ggplot
 theme_set(theme_classic())
@@ -136,6 +137,34 @@ list_of_tables = list(
 write.xlsx(list_of_tables, here('summary','Multi_univariate_stats.xlsx'))
 
 
+
+
+
+# rstatix version ---------------------------------------------------------
+
+
+stats = data %>% 
+  group_by(MetaboliteU, Index) %>% 
+  t_test(AUC ~ Type, detailed = TRUE) %>% 
+  adjust_pvalue(method = "holm") %>%
+  add_significance("p.adj") %>% 
+  mutate(p.adj.stars = gtools::stars.pval(p.adj))
+
+
+
+data.sum %>% 
+  select(MetaboliteU, Type, Mean, SD) %>% 
+  pivot_wider(values_from = c(Mean, SD), names_from = Type) %>% 
+  ggplot(aes(x = Mean_Control, y = Mean_Treatment)) +
+  geom_smooth(method = 'lm') + 
+  geom_point(alpha = 0.5) +
+  geom_errorbar(aes(ymax = Mean_Treatment + SD_Treatment, 
+                    ymin = Mean_Treatment - SD_Treatment),
+                alpha = 0.1) +
+  geom_errorbarh(aes(xmax = Mean_Control + SD_Control, 
+                     xmin = Mean_Control - SD_Control),
+                 alpha = 0.1) +
+  theme_classic()
 
 
 
