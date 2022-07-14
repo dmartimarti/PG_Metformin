@@ -30,7 +30,7 @@ data = read_csv("Summary.csv") %>%
 
 # a short test to demonstrate how linear model works
 # filter the data to only one unique metabolite
-test = data %>% filter(MetaboliteU == 'Amikacin|2')
+test = data %>% filter(MetaboliteU == 'Potassium chromate|4')
 
 # build the model
 # dependent variable ~ independent variable
@@ -59,6 +59,7 @@ test %>%
 
 # first, check that we have at least 2 samples per index
 data %>% group_by(Index,Type) %>% count() %>% arrange(n)
+
 
 # we are good to go, we have at least 2 samples per type and per metabolite
 
