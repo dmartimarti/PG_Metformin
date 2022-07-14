@@ -972,6 +972,105 @@ genome_paths %>%
 
 
 
+# glyphosate degradation ####
+
+
+## assoc Chi2 ####
+
+test_paths = c('ATP biosynthesis', 'isoniazid activation', # present in all
+               'Agmatine Transport', 'mannitol cycle', # present in all
+               'homotaurine degradation', 'acetoin degradation', # present in all
+               'curcumin degradation', 'maltose degradation', # present in a few
+               'salmochelin degradation', 'glyphosate degradation III') # present in a few
+
+test_dt = dt[test_paths,]
+
+assoc(test_dt, shade = TRUE, las=1,
+      labeling_args = list(
+        offset_labels = c(left = -4),
+        offset_varnames = c(left = 0),
+        rot_labels = c(left = 0)))
+
+quartz.save(file = '../exploration/chisq_plots/glyphosate_deg_assoc_test.pdf',
+            type = 'pdf', height = 10, width = 7)
+
+
+
+## PA of path in cohort ####
+
+genome_paths %>% 
+  filter(Completeness == 100) %>% 
+  select(Name, Genome) %>% 
+  mutate(presence = 1) %>% 
+  pivot_wider(names_from = Name, values_from = presence, values_fill = 0)
+
+
+
+length(unique(genome_paths$Genome))
+
+genome_paths %>% 
+  filter(str_detect(Name, 'glyphosate')) %>% 
+  filter(Completeness > 0) %>% 
+  mutate(complete = case_when(Completeness == 100 ~ 'Complete',
+                              Completeness < 100 ~ 'Partial'),
+         .before = VagueReactions) %>% 
+  left_join(metadata, by = c('Genome')) %>% 
+  count(complete) %>% 
+  # drop_na(Broadphenotype) %>% 
+  ggplot(aes(x = complete, y = n, fill =  complete)) +
+  geom_histogram(stat= 'identity', show.legend = F, color = 'black') +
+  scale_fill_manual(values = c('#339EF5', '#FFDC29')) +
+  labs(x = 'Pathway completeness',
+       y = 'Count',
+       title = 'Glyphosate degradation III') +
+  theme_cowplot(15) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+quartz.save(file = '../exploration/glyphosate_deg_completeness.pdf',
+            type = 'pdf', height = 6, width = 4)
+
+
+
+
+# by bacterial phenotype
+genome_paths %>% 
+  filter(str_detect(Name, 'glyphosate')) %>% 
+  filter(Completeness > 0) %>% 
+  mutate(complete = case_when(Completeness == 100 ~ 'Complete',
+                              Completeness < 100 ~ 'Partial'),
+         .before = VagueReactions) %>% 
+  left_join(metadata, by = c('Genome')) %>% 
+  drop_na(Broadphenotype) %>% 
+  filter(Broadphenotype != 'Unknown') %>% 
+  ggplot(aes(complete, fill = Broadphenotype)) +
+  geom_bar(stat = 'count', position = 'dodge') +
+  facet_wrap(~Broadphenotype, scales = 'free_y') +
+  labs(x = 'Pathway completeness',
+       y = 'Count',
+       title = 'Glyphosate degradation III') +
+  theme_cowplot(15) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+quartz.save(file = '../exploration/glyphosate_deg_completeness_phenotype.pdf',
+            type = 'pdf', height = 6, width = 9)
+
+genome_paths %>% 
+  filter(str_detect(Name, 'glyphosate')) %>% 
+  filter(Completeness > 0) %>% 
+  mutate(complete = case_when(Completeness == 100 ~ 'Complete',
+                              Completeness < 100 ~ 'Partial'),
+         .before = VagueReactions) %>% 
+  left_join(metadata, by = c('Genome')) %>% 
+  drop_na(Broadphenotype) %>% 
+  filter(Broadphenotype == 'Laboratory strain') %>% 
+  select(Name, Prediction, Completeness, Genome, Strainname, Broadphenotype, phylogroup) %>% 
+  write_csv('../exploration/glyphosate_lab_strains.csv')
+
+
+
+
+
 # annotation by Prokka ----------------------------------------------------
 
 # this file hasb been created in the script and R Session from the folder
