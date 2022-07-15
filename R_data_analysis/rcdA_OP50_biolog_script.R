@@ -15,6 +15,10 @@ library(cowplot)
 #this sets up the plot theme, I hate the default grey background from ggplot
 theme_set(theme_cowplot(15))
 
+
+# set colours for the plots 
+box_cols = c('#FFAC1D', '#1C8AFF')
+
 # read data
 
 data = read_csv("Summary.csv") %>% 
@@ -147,9 +151,18 @@ write.xlsx(list_of_tables, here('summary','Multi_univariate_stats.xlsx'))
 stats = data %>% 
   group_by(MetaboliteU, Index) %>% 
   t_test(AUC ~ Type, detailed = TRUE) %>% 
-  adjust_pvalue(method = "holm") %>%
-  add_significance("p.adj") %>% 
+  # adjust_pvalue(method = "holm") %>%
+  # add_significance("p.adj") %>% 
   mutate(p.adj.stars = gtools::stars.pval(p.adj))
+
+
+stats %>% 
+  separate(MetaboliteU, into = c('Metabolite', 'Dose'),
+           sep = '\\|') %>%
+  mutate(Dose = as.numeric(Dose)) %>% 
+  filter(Dose == 1) %>% 
+  adjust_pvalue(method = "fdr") %>%
+  add_significance("p.adj") %>% view
 
 
 
@@ -168,6 +181,38 @@ data.sum %>%
   geom_segment(x = 0, y = 0, yend = 20, xend = 20) +
   theme_classic()
 
+
+
+
+# a different version of the stats
+# we can try to sum the AUCs of each rep for the 4 different drug concentrations
+# and make an AUC of the AUCs
+
+data %>% 
+  select(-Metabolite) %>% 
+  separate(MetaboliteU, into = c('Metabolite', 'Dose'),
+           sep = '\\|', remove = FALSE) %>% 
+  group_by(Strain, Type, Replicate, Metabolite) %>% 
+  summarise(sumAUC = sum(AUC)) %>% 
+  group_by( Metabolite) %>% 
+  t_test(sumAUC ~ Type, detailed = TRUE, p.adjust.method = 'none') %>% 
+  adjust_pvalue(method = "fdr") %>%
+  add_significance("p.adj") %>% view
+
+# plot some differences
+data %>% 
+  select(-Metabolite) %>% 
+  separate(MetaboliteU, into = c('Metabolite', 'Dose'),
+           sep = '\\|', remove = FALSE) %>% 
+  group_by(Strain, Type, Replicate, Metabolite) %>% 
+  summarise(sumAUC = sum(AUC)) %>% 
+  filter(Metabolite == 'Potassium chromate') %>% 
+  ggplot(aes(x = Type, y = sumAUC, fill = Type)) +
+  geom_pointrange() +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge()) +
+  ylim(0, 18) +
+  scale_fill_manual(values = box_cols)
 
 
 
