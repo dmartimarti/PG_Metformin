@@ -10,9 +10,10 @@ library(openxlsx)
 library(here)
 library(ComplexHeatmap)
 library(rstatix)
+library(cowplot)
 
 #this sets up the plot theme, I hate the default grey background from ggplot
-theme_set(theme_classic())
+theme_set(theme_cowplot(15))
 
 # read data
 
@@ -31,7 +32,7 @@ data = read_csv("Summary.csv") %>%
 
 # a short test to demonstrate how linear model works
 # filter the data to only one unique metabolite
-test = data %>% filter(MetaboliteU == 'Potassium chromate|4')
+test = data %>% filter(MetaboliteU == 'Potassium chromate|1')
 
 # build the model
 # dependent variable ~ independent variable
@@ -157,13 +158,14 @@ data.sum %>%
   pivot_wider(values_from = c(Mean, SD), names_from = Type) %>% 
   ggplot(aes(x = Mean_Control, y = Mean_Treatment)) +
   geom_smooth(method = 'lm') + 
-  geom_point(alpha = 0.5) +
+  geom_point(alpha = 0.1) +
   geom_errorbar(aes(ymax = Mean_Treatment + SD_Treatment, 
                     ymin = Mean_Treatment - SD_Treatment),
                 alpha = 0.1) +
   geom_errorbarh(aes(xmax = Mean_Control + SD_Control, 
                      xmin = Mean_Control - SD_Control),
                  alpha = 0.1) +
+  geom_segment(x = 0, y = 0, yend = 20, xend = 20) +
   theme_classic()
 
 
