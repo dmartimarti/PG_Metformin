@@ -864,24 +864,83 @@ mdtB = read.alignment(here('gene_extract','aln','mdtB.aln'), format= 'fasta')
 
 
 system.file("/Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/gene_extract/aln/mdtB.aln",'mdtB.aln', 
-            "mdtB.aln", 
-            package = "ggmsa")
+            "mdtB.aln")
 
 
-ggmsa(mdtB, 
-      # start = 221, 
-      # end = 280, 
-      char_width = 0.5, 
-      seq_name = T) + 
-  geom_seqlogo() + 
+
+mdtb_short = "/Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/gene_extract/aln/mdtB_short.aln"
+mdtb = "/Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/gene_extract/aln/mdtB.aln"
+
+
+ggmsa(mdtb, 
+      start = 500,
+      end = 550,
+      char_width = 0.3, 
+      seq_name = F,
+      disagreement = TRUE,
+      use_dot = TRUE,
+      consensus_views = TRUE) +
+  # geom_seqlogo() + 
   geom_msaBar()
 
 
 
+seqlogo(mdtb, 
+        start = 0,
+        end = 200,
+        color = "Chemistry_AA", 
+        font = "DroidSansMono")
 
 
 
 
 
+# map gene names with genomes ---------------------------------------------
 
 
+genes_roary = read_csv("gene_presence_absence_roary.csv")
+
+
+mdtb_roary = genes_roary %>% 
+  filter(Gene == 'mdtB') %>% 
+  pivot_longer(`100`:SPC_4,
+               names_to = 'Genome',
+               values_to = 'ref') %>% 
+  select(Gene, Genome, ref, everything())
+
+mdtb_roary %>% 
+  select(ref, Genome) %>% view
+
+
+# create a file that can be used as an annotation in alignmentviewer.org
+# version with bact phenotype
+metadata %>% 
+  mutate(Genome = str_sub(fasta, 1, -7),
+         .before= 'ID') %>% 
+  select(Genome, Broadphenotype) %>% 
+  replace_na(list(Broadphenotype = 'Unknown')) %>% 
+  left_join(
+    mdtb_roary %>% 
+      select(Genome, ref)
+  ) %>% 
+  drop_na(ref) %>% 
+  select(name = ref, annotation = Broadphenotype) %>% 
+  write_delim('gene_extract/aln/mdtB_ref_phenotype.txt',
+              quote = 'none',
+              delim = '\t')
+
+# version with phylogroups
+metadata %>% 
+  mutate(Genome = str_sub(fasta, 1, -7),
+         .before= 'ID') %>% 
+  select(Genome, phylogroup) %>% 
+  # replace_na(list(Broadphenotype = 'Unknown')) %>% 
+  left_join(
+    mdtb_roary %>% 
+      select(Genome, ref)
+  ) %>% 
+  drop_na(ref) %>% 
+  select(name = ref, annotation = phylogroup) %>% 
+  write_delim('gene_extract/aln/mdtB_ref_phylogroup.txt',
+              quote = 'none',
+              delim = '\t')
