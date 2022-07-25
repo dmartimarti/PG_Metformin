@@ -56,6 +56,8 @@ dim(gene_pa_t)
 
 ## Merging the worm phenotype, metadata and genetic information together ####
 
+
+
 # case for all genes included in pyseer
 worm_FC_PA_all = metadata %>% 
   mutate(genome = str_sub(fasta, 1, -7),
@@ -65,7 +67,9 @@ worm_FC_PA_all = metadata %>%
   filter(Discard == 'No') %>% 
   left_join(input_pyseer %>% 
               rename(genome = IDs)) %>% 
-  left_join(gene_pa_all)
+  left_join(gene_pa_all) %>% 
+  mutate(FC_class = ntile(FC_worm, 4),
+         .before = 'ID')
 
 # case for only genes that are significant
 worm_FC_PA_sig = metadata %>% 
@@ -76,13 +80,104 @@ worm_FC_PA_sig = metadata %>%
   filter(Discard == 'No') %>% 
   left_join(input_pyseer %>% 
               rename(genome = IDs)) %>% 
-  left_join(gene_pa_sig)
+  left_join(gene_pa_sig) %>% 
+  mutate(FC_class = ntile(FC_worm, 4),
+         .before = 'ID')
+
+
+
+# divide the data in quantiles
+quants = worm_FC_PA_sig %>% 
+  summarise(FC_class = scales::percent(c(.20,.80)),
+            class = quantile(FC_worm, c(.20,.80)))
+
+
+
 # save the full model 
 worm_FC_PA_all %>% 
+  mutate(FC_class = case_when(FC_worm <= quants$class[1] ~ 'low',
+                              FC_worm > quants$class[1] & 
+                                FC_worm <= quants$class[2] ~ 'medium',
+                              FC_worm > quants$class[2] ~ 'large'),
+         .before = 'ID') %>% 
   write.xlsx('output/tables/worm_FC_PA_all.xlsx')
 
 # save the full model 
 worm_FC_PA_sig %>% 
+  mutate(FC_class = case_when(FC_worm <= quants$class[1] ~ 'low',
+                              FC_worm > quants$class[1] & 
+                                FC_worm <= quants$class[2] ~ 'medium',
+                              FC_worm > quants$class[2] ~ 'large'),
+         .before = 'ID') %>% 
   write.xlsx('output/tables/worm_FC_PA_sig.xlsx')
+
+
+
+worm_FC_PA_sig %>% 
+  mutate(FC_class = case_when(FC_worm <= quants$class[1] ~ 'low',
+                              FC_worm > quants$class[1] & FC_worm <= quants$class[2] ~ 'medium',
+                              FC_worm > quants$class[2] ~ 'large'),
+         .before = 'ID') %>% 
+  ggplot(aes(x = fct_reorder(genome, FC_worm),
+             y = FC_worm,
+             color = FC_class)) +
+  geom_point() +
+  theme_classic() + 
+  theme(
+    axis.text.x = element_blank()
+  )
+
+
+worm_FC_PA_sig %>% 
+  mutate(FC_class = ntile(FC_worm, 4),
+         .before = 'ID')
+
+
+# previous data
+x_data_TOTAL <- read_csv("data/x_data_TOTAL.csv")
+
+y_data_TOTAL <- read_csv("data/y_data_TOTAL.csv", 
+                         col_names = FALSE)
+
+
+x_data_TOTAL %>% 
+  select(Broadphenotype, FC_class, phylogroup, Worm_metf_0) %>% 
+  bind_cols(y_data_TOTAL) %>% 
+  mutate(ID = paste0(FC_class,Worm_metf_0)) %>% 
+  ggplot(aes(y = X1,
+             x = fct_reorder(ID, X1),
+             color = FC_class)) +
+  geom_point() +
+  theme(
+    axis.text.x = element_blank()
+  )
+
+
+quants = x_data_TOTAL %>% 
+  select(Broadphenotype, FC_class, phylogroup, Worm_metf_0) %>% 
+  bind_cols(y_data_TOTAL) %>% 
+  mutate(ID = paste0(FC_class,Worm_metf_0)) %>% 
+  summarise(new_class = scales::percent(c(.20,.80)),
+           class = quantile(X1, c(.20,.80)))
+
+x_data_TOTAL %>% 
+  select(Broadphenotype, FC_class, phylogroup, Worm_metf_0) %>% 
+  bind_cols(y_data_TOTAL) %>% 
+  mutate(ID = paste0(FC_class,Worm_metf_0)) %>% 
+  mutate(new_class = case_when(X1 <= 1.35 ~ 'low',
+                               X1 > 1.35 & X1 <= 2.19 ~ 'medium',
+                               X1 > 2.19 ~ 'large')) %>% 
+  ggplot(aes(y = X1,
+             x = fct_reorder(ID, X1),
+             color = new_class)) +
+  geom_point() +
+  theme(
+    axis.text.x = element_blank()
+  )
+
+
+
+
+
 
 
