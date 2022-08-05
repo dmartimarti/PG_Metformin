@@ -18,6 +18,7 @@ library(ggrepel)
 library(patchwork)
 library(cowplot)
 library(glue)
+library(broom)
 
 theme_set(theme_cowplot(14))
 
@@ -505,7 +506,7 @@ dev.copy2pdf(device = cairo_pdf,
 
 # load the gene presence matrix
 
-gene_pa =read_csv("gene_presence_absence.csv")
+gene_pa = read_csv("gene_presence_absence.csv")
 
 # names(gene_pa)
 
@@ -664,7 +665,7 @@ dev.copy2pdf(device = cairo_pdf,
 gene_fam_df %>%
   filter(class != 'core') %>%
   ggplot(aes(x = per, y = lengths, color = class)) +
-  geom_point(alpha = 0.2) +
+  geom_point(alpha = 0.1) +
   geom_smooth(method = 'lm', color = 'black') +
   ggpubr::stat_cor(
     p.accuracy = 0.001, r.accuracy = 0.01) +
@@ -779,45 +780,98 @@ gene_fam_df %>%
 
 # PCA of gene P/A ---------------------------------------------------------
 
-gene_bin2 = gene_bin %>% 
-  select(-total)
-
-# transpose the matrix to have gene names as columns
-gene_bin2 = gene_bin2 %>% 
-  pivot_longer(cols = where(is.numeric), 
-               values_to = 'presence', names_to = 'genome') %>% 
-  pivot_wider(names_from = gene, values_from = presence)
+gene_pa = read_delim("gene_presence_absence.Rtab", 
+                     delim = "\t", escape_double = FALSE, 
+                     trim_ws = TRUE)
 
 
-pca_fit <- gene_bin2 %>% 
+phylo = metadata %>% 
+  filter(Origin %in% c('AUS', 'ECOREF')) %>% 
+  filter(Discard == 'No') %>% 
+  select(fasta, Broadphenotype, phylogroup) %>% 
+  distinct(fasta, .keep_all = TRUE) %>% 
+  mutate(genome = str_sub(fasta, 
+                          start = 1, end = -7)) %>% 
+  select(-fasta)
+
+
+## transpose the df ------
+
+colnames(gene_pa)
+
+# transposing a matrix is super easy but a dataframe in R is a pain
+# first we need to make the table long
+gene_pa_long = gene_pa %>% 
+  pivot_longer(cols = `100`:SPC_4, 
+               names_to = 'genome', 
+               values_to = 'presence')
+
+# then we can add the metadata info to the table itself
+gene_pa_long = gene_pa_long %>% 
+  left_join(phylo) %>% 
+  drop_na(phylogroup)
+
+
+# now we can make it wider again, but using the gene info instead of genomes
+# as columns
+
+gene_pa_wide = gene_pa_long %>% 
+  pivot_wider(names_from = Gene, 
+              values_from = presence)
+
+# Dimensionality reduction ------
+
+## PCA plot ------
+
+pca_fit = gene_pa_wide %>% 
   select(where(is.numeric)) %>% # retain only numeric columns
-  prcomp(scale = F)
+  prcomp(scale = F) # do PCA on scaled data
 
 
-
-
-pca_plot = pca_fit %>%
-  broom::augment(gene_bin2) %>% # add original dataset back in
-  select(genome, .fittedPC1:.fittedPC5) %>% 
-  left_join(metadata %>% 
-              mutate(genome = str_sub(fasta, start = 1, end = -7), .before = ID) %>% 
-              select(genome, Broadphenotype, phylogroup))
-
-
-
-pca_plot %>% 
+pca_fit %>%
+  augment(gene_pa_wide) %>% # add original dataset back in
   drop_na(phylogroup) %>% 
+  mutate(phylogroup = str_replace_all(phylogroup, 'E or cladeI', 'E')) %>% 
   filter(phylogroup != 'cladeI') %>% 
-  filter(phylogroup != 'E or cladeI') %>% 
-  ggplot(aes(.fittedPC1, .fittedPC2, color = phylogroup, fill = phylogroup)) + 
-  geom_point(size = 2, alpha = 0.7) +
-  # stat_ellipse() +
-  stat_ellipse(level=0.95, geom = 'polygon', alpha = 0.3) +
-  theme_half_open(12) 
+  ggplot(aes(.fittedPC1, .fittedPC2, 
+             color = phylogroup,
+             fill = phylogroup)) + 
+  stat_ellipse(geom = 'polygon', alpha = 0.2) +
+  geom_point(size = 2.5) +
+  theme_half_open(12) + 
+  background_grid()
+
+
+
+# pca_fit %>%
+#   augment(gene_pa_wide) %>% # add original dataset back in
+#   drop_na(phylogroup) %>% 
+#   # mutate(phylogroup = str_replace_all(phylogroup, 'E or cladeI', 'E')) %>% 
+#   filter(phylogroup != 'cladeI') %>% 
+#   ggplot(aes(.fittedPC1, .fittedPC2, 
+#              color = Broadphenotype,
+#              fill = Broadphenotype)) + 
+#   stat_ellipse(geom = 'polygon', alpha = 0.2) +
+#   geom_point(size = 2.5) +
+#   theme_half_open(12) + 
+#   background_grid()
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'PCA_gene_PA.pdf'),
              height = 8, width = 9, useDingbats = FALSE)
+
+
+
+pca_fit %>%
+  tidy(matrix = "rotation") %>%
+  pivot_wider(names_from = "PC", names_prefix = "PC", values_from = "value") %>% 
+
+
+
+
+
+
+
 
 
 
