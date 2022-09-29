@@ -546,9 +546,27 @@ dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'gene_counts_per_genome.pdf'),
              height = 5, width = 6, useDingbats = FALSE)
 
+## plot for Andreea ####
 
+gene_bin %>% 
+  mutate(`Gene function` = case_when(str_detect(gene, 'group') ~ 'Unknown',
+                           TRUE ~ 'Known'), .before = total) %>% 
+  ggplot(aes(x = total, fill = `Gene function`)) +
+  geom_histogram(position = 'identity',
+                 bins=70,
+                 # fill = 'grey60', 
+                 # color = 'black',
+                 binwidth = 10) +
+  labs(y = 'Gene count',
+       x = 'Number of genomes with a specific gene') +
+  scale_x_continuous(breaks = seq(0,750,150)) +
+  scale_fill_manual(values = c('#2772E6', '#E6A627')) +
+  theme_cowplot(20) +
+  theme(legend.position=c(.5, .8)) 
 
-
+dev.copy2pdf(device = cairo_pdf,
+             file = here('R_plots', 'gene_counts_per_genome.pdf'),
+             height = 5, width = 7, useDingbats = FALSE)
 
 
 
