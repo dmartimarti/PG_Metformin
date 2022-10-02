@@ -310,7 +310,7 @@ dev.copy2pdf(device = cairo_pdf,
 ### pval ####
 # ALL
 
-manhplot.pval(all_nobio, limit = 5, unk = F)
+manhplot.pval(all_nobio, limit = 6, unk = F)
 
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'manhattan_pyseer_pval_all_nobio.pdf'),
@@ -331,6 +331,7 @@ manhplot.pval(aus_nobio, limit = 6, unk = F)
 dev.copy2pdf(device = cairo_pdf,
              file = here('R_plots', 'manhattan_pyseer_pval_AUS_nobio.pdf'),
              height = 10, width = 14, useDingbats = FALSE)
+
 
 
 manhplot.pval(aus_worm, limit = 6, unk = F)
@@ -411,8 +412,8 @@ get_genes = function(pyseer_out = all_nobio,
 
 #### save datasets ####
 
-pval_thres = 6
-lrt_thres = 3
+pval_thres = 5
+lrt_thres = 2
 
 # ALL
 get_genes(all_nobio, mode = 'lrt', thres = lrt_thres) %>% 
@@ -446,6 +447,21 @@ get_genes(aus_worm, mode = 'pval', thres = pval_thres) %>%
   write_delim( here('pyseer_output/gene_lists',glue('aus_worm_pval_{pval_thres}.txt')), 
                col_names = F)
 
+# ECOREF
+get_genes(ecoref_nobio, mode = 'lrt', thres = lrt_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('ecoref_nobio_lrt_{lrt_thres}.txt')), 
+               col_names = F)
+get_genes(ecoref_nobio, mode = 'pval', thres = pval_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('ecoref_nobio_pval_{pval_thres}.txt')), 
+               col_names = F)
+
+
+get_genes(ecoref_worm, mode = 'lrt', thres = lrt_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('ecoref_worm_lrt_{lrt_thres}.txt')), 
+               col_names = F)
+get_genes(ecoref_worm, mode = 'pval', thres = pval_thres) %>% 
+  write_delim( here('pyseer_output/gene_lists',glue('ecoref_worm_pval_{pval_thres}.txt')), 
+               col_names = F)
 
 # pyseer bact ------------------------------------------------------------------
 
