@@ -190,4 +190,124 @@ full_metadata %>%
   filter(!is.na(Notes))
 
 
+# annotate duplicates ---------------------
+library(readxl)
+MAIN_metadata <- read_excel("MAIN_metadata.xlsx", 
+                            sheet = "metadata")
+
+dups = MAIN_metadata$ID[duplicated(MAIN_metadata$ID)]
+
+full_meta_dups = MAIN_metadata %>% 
+  mutate(Duplicate = case_when(ID %in% dups ~ 'Yes',
+                               TRUE ~ 'No')) %>% 
+  group_by(ID, Duplicate) %>% 
+  mutate(Duplicate_n = seq_along(Duplicate)) %>% 
+  list('metadata' = .)
+
+write.xlsx(full_meta_dups, 'MAIN_metadata.xlsx')
+
+
+
+
+# RNAseq landscape version ------------------------------------------------
+
+
+
+MAIN_metadata = read_excel("MAIN_metadata.xlsx", 
+                            sheet = "metadata")
+
+# load the strains that produce biofilms in control conditions (LB media)
+bcsA_strains =
+  read_excel("RNAseq_project/E. coli collection EcoRef and Aus- bcsA strains .xlsx") %>% 
+  pull(Strain)
+
+bcsA_strains
+
+# filter
+rnaseq_meta = MAIN_metadata %>% 
+  select(-Annotation_0mM, -Annotation_50mM, -Annotation) %>% 
+  filter(Origin %in% c('AUS', 'ECOREF'),
+         Duplicate_n == 1,
+         Discard == 'No') %>% 
+  filter(!(ID %in% bcsA_strains)) %>% 
+  mutate(RNAseq = 'valid')
+
+
+rnaseq_meta %>% 
+  distinct(ID)
+
+# save the file
+write.xlsx(rnaseq_meta, 'RNAseq_project/RNAseq_metadata.xlsx')
+
+
+
+# plate layout ------------------------------------------------------------
+
+
+rnaseq_meta = read_excel("RNAseq_project/RNAseq_metadata.xlsx")
+
+plates  = unique(rnaseq_meta$PG)
+
+wells_expanded = expand_grid(expand_grid(col = LETTERS[1:8], row = seq(1,12)) %>% 
+                               unite(Well, col, row, sep = ''), 
+                             plates) %>% 
+  rename(PG = plates)
+
+plate_layout = MAIN_metadata %>% 
+  left_join(rnaseq_meta) %>%
+  filter(PG %in% plates) %>% 
+  full_join(wells_expanded) %>% 
+  mutate(NewID = case_when(RNAseq == 'valid' ~ ID,
+                            TRUE ~ 'NOT VALID')) 
+  
+
+
+
+  
+
+# initialise variables
+plates = unique(rnaseq_meta$PG)
+row_names = LETTERS[1:8]
+col_names = seq(1,12)
+
+plates_list = list()
+for (plate in plates) {
+  
+  plate_name = as.character(plate)
+  
+  temp_ids = plate_layout %>% 
+    mutate(Column = str_extract(Well, '\\w'),
+           Row = str_extract(Well, '\\d{1,}')) %>% 
+    filter(PG == plate) %>% 
+    mutate(Row = as.numeric(Row)) %>% 
+    arrange(Column, Row) %>% 
+    pull(NewID)  
+  
+  temp_matrix = matrix(data = temp_ids, 
+                       nrow = 8, ncol = 12, byrow = T)
+  
+  rownames(temp_matrix) = row_names
+  colnames(temp_matrix) = col_names
+  
+  temp_list = list(plate_name = temp_matrix)
+  
+  plates_list = append(plates_list, temp_list)
+}
+
+# fix naming of plates in list
+names(plates_list) = plates
+
+sink("RNAseq_project/RNAseq_plate_layout.csv", type="output")
+invisible(lapply(names(plates_list), 
+                 function(x) { print(x)
+                   dput(write.csv(plates_list[[x]])) } ))
+sink()
+
+
+write.xlsx(plates_list, 'RNAseq_project/RNAseq_plate_layout_multipage.xlsx',
+           overwrite = T,
+           rownames = T)
+
+
+
 
