@@ -871,6 +871,26 @@ pca_fit %>%
              color = phylogroup,
              fill = phylogroup)) + 
   stat_ellipse(geom = 'polygon', alpha = 0.2) +
+  scale_colour_manual(values = c(
+    "#E41A1C", # A
+    "#377EB8", # B1
+    "#4DAF4A", # B2
+    "#984EA3", # C
+    "#FF7F00", # D
+    "#FFFF33", # E
+    "#A65628", # F
+    "#F781BF"  # G  
+  )) + 
+  scale_fill_manual(values = c(
+    "#E41A1C", # A
+    "#377EB8", # B1
+    "#4DAF4A", # B2
+    "#984EA3", # C
+    "#FF7F00", # D
+    "#FFFF33", # E
+    "#A65628", # F
+    "#F781BF"  # G  
+  )) + 
   geom_point(size = 2.5) +
   theme_half_open(12) + 
   background_grid()
