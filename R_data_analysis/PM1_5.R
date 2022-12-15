@@ -373,19 +373,9 @@ dev.copy2pdf(device = cairo_pdf,
 
 
 
-# # # # # # # # # # #
-# scatter plots #####
-# # # # # # # # # # #
 
 
-# op50
-
-cosa = data.b %>% filter(Strain == 'OP50') %>%
-  filter(!Metabolite %in% c('Negative Control')) %>%
-  select(MetaboliteU, Replicate, Type, AUC) %>%
-  pivot_wider(names_from = Type, Replicate, values_from = AUC)
-  
-
+# stats (Pov's code) ------------------------------------------------------
 
 
 # linear modeling
@@ -1023,15 +1013,33 @@ low.enrich %>%
   guides(size = 'none') +
   theme_cowplot(15) +
     theme(
-      legend.title = element_markdown(),
+      # legend.title = element_markdown(),
       legend.text = element_markdown(),
       axis.title.x = element_markdown(),
       axis.title.y = element_markdown()
     )
 
 
+
+low.enrich %>% 
+  bind_rows(high.enrich) %>%
+  filter(pval <= 0.05) %>% 
+  mutate(logpval = -log(pval)) %>%
+  mutate(categories = str_sub(categories, start = 2, end = -2)) %>% 
+  mutate(categories = str_wrap(categories, width = 25)) %>%  
+  ggplot(aes(x = grouping,y = categories, 
+             size = logpval, color =  p.stars)) +
+  geom_point() +
+  scale_colour_manual(values = c('#F5A032', '#FA2419')) +
+  labs(x = 'Growth capacity in rcdA vs WT',
+       y = 'Nutrient class',
+       color = '-log10(P-value)') +
+  scale_y_discrete(limits=rev) +
+  guides(size = 'none') +
+  theme_cowplot(15) 
+
 ggsave(file = here('summary', 'EcoCyc_metab_enrich_rcdA_vs_OP50.pdf'),
-       width = 9, height = 8, device = cairo_pdf)
+       width = 7, height = 8, device = cairo_pdf)
 
 
 
