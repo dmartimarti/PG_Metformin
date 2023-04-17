@@ -2,3 +2,4 @@
 
 .DS_Store
 *.pyc
+phylo/sample_metadata.tsv
