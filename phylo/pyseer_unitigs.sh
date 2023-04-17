@@ -34,7 +34,10 @@ python pyseer/scripts/qq_plot.py ./pyseer_output/results/worm_phenotype_ALL_no_b
 
 cd /Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo_analysis/panaroo_results_noEVO/pyseer_output/results/
 
-cat <(head -1 worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) <(awk '$4<3.10E-05 {print $0}' worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) > wp_ALL_no_biofilm_significant_kmers.txt
+cat <(head -1 worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) <(awk '$4<3.10E-04 {print $0}' worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) > wp_ALL_no_biofilm_significant_kmers.txt
+
+
+cat <(head -1 worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) <(awk '$3<3.10E-05 || $4<3.10E-05 {print $0}' worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) > wp_ALL_no_biofilm_significant_kmers.txt
 
 
 # Mapping to a single reference
@@ -44,7 +47,7 @@ python ../../pyseer/phandango_mapper-runner.py  worm_phenotype_ALL_no_biofilm_UN
 
 
 # annotate the kmers
-python  ../pyseer/annotate_hits_pyseer-runner.py results/wp_ALL_no_biofilm_significant_kmers.txt references.txt results/wp_ALL_no_biofilm_annotated_kmers.txt
+python  ../pyseer/annotate_hits_pyseer-runner.py results/wp_ALL_no_biofilm_significant_kmers.txt ref_complete.txt results/wp_ALL_no_biofilm_annotated_kmers.txt
 
 # summarise 
 python ../pyseer/scripts/summarise_annotations.py  results/wp_ALL_no_biofilm_annotated_kmers.txt > results/gene_hits.txt
