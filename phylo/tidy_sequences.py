@@ -5,20 +5,51 @@ If there are duplicated names, it will rename them with the original name + a nu
 It also removes sequences with more than 50% of gaps 
 Usage example: python rename_duplicates.py input.fasta output.fasta gene_presence_absence.csv
 """
-import sys
+import argparse
 from Bio import SeqIO
 import pandas as pd
+
+argparser = argparse.ArgumentParser(
+    description="Renames sequences with the original genome name and filters seqs with many gaps",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+
+argparser.add_argument("-i", "--input", help="Input fasta file, usually an alignment file")
+argparser.add_argument("-p", "--phenotype", help="Original phenotype txt file used with Pyseer")
+argparser.add_argument("-o", "--output", help="Output fasta file")
+argparser.add_argument("-g", "--gene_pa", help="Gene presence absence file")
+
+args = argparser.parse_args()
 
 # function to read a fasta file and return a dictionary of the sequences
 def read_fasta(fasta_file):
     """ Read a fasta file with biopython """
-    records = list(SeqIO.parse(fasta_file, "fasta"))
-    return records
+    try:
+        records = list(SeqIO.parse(fasta_file, "fasta"))
+        return records
+    except:
+        # print in red and bold
+        print("\033[1;31mError reading fasta file\033[0m")
+        exit()
 
 def read_gene_pa(gene_pa):
     """ Read a gene_pa file with pandas from a csv file"""
-    gene_pa = pd.read_csv(gene_pa, engine='pyarrow')
-    return gene_pa
+    try:
+        gene_pa = pd.read_csv(gene_pa, engine='pyarrow')
+        return gene_pa
+    except:
+        print("\033[1;31mError reading gene presence absence file file\033[0m")
+        exit()
+
+# read a txt file separated by tabs with pandas
+def read_txt(txt_file):
+    """ Read a txt file with pandas from a csv file"""
+    try:
+        txt = pd.read_csv(txt_file, sep="\t")
+        return txt
+    except:
+        print("\033[1;31mError reading txt file\033[0m")
+        exit()
 
 def get_gene_metadata(gene_pa, gene):
     """ Get gene metadata from gene_pa file given a specific gene present in the file"""
@@ -26,7 +57,7 @@ def get_gene_metadata(gene_pa, gene):
         gene_metadata = gene_pa.loc[gene_pa['Gene'] == gene]
         return gene_metadata
     except:
-        print("Gene not found in gene_pa file! I can't continue :(")
+        print("Gene not found in gene_pa file!")
         return None
 
 # are duplicated names?
@@ -83,9 +114,12 @@ def remove_gaps(seqs):
 def main():
     """ Main function """
     # read input file
-    seqs = read_fasta(sys.argv[1])
-    gene = sys.argv[1].split('.')[0]
-    gene_pa = read_gene_pa(sys.argv[3])
+    seqs = read_fasta(args.input)
+    gene = args.input.split('.')[0]
+    gene_pa = read_gene_pa(args.gene_pa)
+    pheno = read_txt(args.phenotype)
+
+    pheno_ids = pheno['IDs'].tolist()
 
     # gene metadata
     gene_metadata = get_gene_metadata(gene_pa, gene)
@@ -98,7 +132,11 @@ def main():
         seqs[i].id = ids[i]
         seqs[i].name = ids[i]
         seqs[i].description = ""
-
+    
+    # filter sequences that are in the pheno_ids list
+    print("Filtering sequences that are not in the phenotype file\n")
+    seqs = [seq for seq in seqs if seq.id in pheno_ids]
+    
     # check if there are duplicated names
     if check_duplicates(seqs):
         # rename duplicated names
@@ -113,7 +151,7 @@ def main():
     seqs = remove_gaps(seqs)
         
     # write output file
-    SeqIO.write(seqs, sys.argv[2], "fasta")
+    SeqIO.write(seqs, args.output, "fasta")
     print("\033[1;32mDone\033[0m\n")
 
 if __name__ == "__main__":
