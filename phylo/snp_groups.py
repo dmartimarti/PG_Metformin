@@ -4,19 +4,32 @@ It will also plot the variation in a barplot.
 Usage example: python variation.py input.fasta 
 """
 
-import sys
+import argparse
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# parse arguments
+parser = argparse.ArgumentParser(
+    description="Takes an alignment and analyse where the variation is in the protein."
+    )
+parser.add_argument("-i", "--input", help="Input fasta file")
+
+args = parser.parse_args()
 
 # function to read an alignment fasta file and return the sequences
 def read_fasta(fasta_file):
     """ Read a fasta file with biopython """
-    records = list(SeqIO.parse(fasta_file, "fasta"))
-    return records
+    try:
+        records = list(SeqIO.parse(fasta_file, "fasta"))
+        return records
+    except:
+        # print in red and bold
+        print("\033[1;31mError reading fasta file, did you input a true fasta file?\033[0m")
+        # end the program
+        exit()
 
 # function to get the positions where there is variation
 def get_var_positions(seqs):
@@ -47,10 +60,22 @@ def filter_variations(variations, seqs, low=0.02, high=0.98):
 
 # add frequency column to the filtered variations dataset, Try using .loc[row_indexer,col_indexer] = value instead
 def add_freq(variations, seqs):
-    """ Add frequency column to the filtered variations dataset """
+    """ Add frequency column to the filtered variations dataset after the 'count' column """
     with pd.option_context('mode.chained_assignment', None):
         variations["freq"] = variations["count"] / len(seqs)
-        return variations
+    return variations
+ 
+def get_groups(variations_df_filt, seqs):
+    """ From the positions in the filtered variation list, create a dataframe with groups of ids that have the same variation """
+    groups = []
+    for pos in set(variations_df_filt["pos"]):
+        for base in set(variations_df_filt[variations_df_filt["pos"] == pos]["aa"]):
+            group = []
+            for seq in seqs:
+                if seq.seq[pos] == base:
+                    group.append(seq.id)
+            groups.append([pos, base, len(group), group])
+    return pd.DataFrame(groups, columns=["pos", "aa", "count", "genomes"])
 
 def plot_variations(variations, gene):
     """ Plot the variations """
@@ -73,9 +98,9 @@ def main():
     """ Main function """
     # read fasta file
     print("\033[1;32mReading fasta file...\033[1;m")
-    seqs = read_fasta(sys.argv[1])
+    seqs = read_fasta(args.input)
     # get gene name
-    gene = sys.argv[1].split("/")[-1].split(".")[0]
+    gene = args.input.split("/")[-1].split(".")[0]
     # get positions where there is variation
     print("\033[1;32mGetting positions where there is variation...\033[1;m")
     positions = get_var_positions(seqs)
@@ -86,17 +111,19 @@ def main():
     print("\033[1;32mFiltering out variations with af below 2% and above 98%...\033[1;m")
     variations = filter_variations(variations, seqs)
     # add frequency column
-    print("\033[1;32mAdding frequency column...\033[1;m")
     variations = add_freq(variations, seqs)
-    # save the variations dataframe
-    print("\033[1;32mSaving variations dataframe...\033[1;m")
-    variations.to_csv(f"{gene}_variations.csv", index=False)
+    # get groups
+    print("\033[1;32mGetting groups...\033[1;m")
+    groups = get_groups(variations, seqs)
+    # save groups dataframe
+    print("\033[1;32mSaving groups dataframe...\033[1;m")
+    groups.to_csv(f"{gene}_groups.csv", index=False)
     # plot variations
     print("\033[1;32mPlotting variations...\033[1;m")
     plot_variations(variations, gene)
     # save variations dataframe
-    print("\033[1;32mSaving variations dataframe...\033[1;m")
-    variations.to_csv(f"{gene}_variations.csv", index=False)
+    # print("\033[1;32mSaving variations dataframe...\033[1;m")
+    # variations.to_csv(f"{gene}_variations.csv", index=False)
     print("\033[1;32mDone!\033[1;m")
 
 if __name__ == "__main__":
