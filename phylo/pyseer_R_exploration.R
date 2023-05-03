@@ -19,7 +19,7 @@ gene_hits %>%
   #                               gene_name == 'mdtB' ~ 65)) %>% 
   mutate(label_size = case_when(str_detect(gene_name, 'mdt')  ~ 65,
                                 TRUE ~ 20)) %>% 
-  # filter(avg_beta > 0.8 | maxp > 7) %>% 
+  filter(avg_beta > 0.8 | maxp > 2) %>%
   ggplot(aes(x=avg_beta, y=maxp, colour=avg_maf, size=hits, label=gene_name)) +
   geom_point(alpha=0.5) +
   geom_text_repel(aes(size=label_size), 
