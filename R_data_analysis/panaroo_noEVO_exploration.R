@@ -891,10 +891,16 @@ pca_fit %>%
     "#A65628", # F
     "#F781BF"  # G  
   )) + 
-  geom_point(size = 2.5) +
+  geom_point(size = 1.5) +
   theme_half_open(12) + 
   background_grid()
 
+
+pca_fit %>%
+  augment(gene_pa_wide) %>% # add original dataset back in
+  drop_na(phylogroup) %>% 
+  select(genome:phylogroup, .fittedPC1, .fittedPC2) %>% 
+  write_csv("PCA_12_gene_PA.csv")
 
 
 # pca_fit %>%

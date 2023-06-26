@@ -44,7 +44,7 @@ worm.img =  read_excel("data/ALL_worm_stats.xlsx",
 
 ## BACTERIA
 
-resistance = read_csv("D:/MRC_Postdoc/Pangenomic/pangenome_analysis/ALL/bacterial_growth/bacterial_growth_ALL.csv")  %>% 
+resistance = read_csv("data/bacterial_growth_ALL.csv")  %>% 
   select(-`...1`)
 
 
@@ -178,7 +178,8 @@ ggsave(file = here('exploration', 'rtree_nolabels.eps'), width = 100, height = 1
 # keep the first instance of the duplicated elements
 res2 = resistance %>%
   rename(ID = Strain) %>% 
-  distinct(ID, .keep_all = TRUE)
+  distinct(ID, .keep_all = TRUE) %>% 
+  select(ID, Bact_score_mean)
 
 
 info = worm.img %>%
