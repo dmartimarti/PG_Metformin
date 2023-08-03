@@ -1058,3 +1058,82 @@ metadata %>%
   write_delim('gene_extract/aln/mdtB_ref_phylogroup.txt',
               quote = 'none',
               delim = '\t')
+
+
+
+
+
+# Venn diagram ------------------------------------------------------------
+
+set.seed(20190708)
+genes <- paste("gene",1:1000,sep="")
+x <- list(
+  A = sample(genes,300), 
+  B = sample(genes,525), 
+  C = sample(genes,440),
+  D = sample(genes,350)
+)
+
+library(VennDiagram)
+venn.diagram(x, filename = "venn-4-dimensions.png")
+library(ggvenn)
+
+ggvenn(
+  x[1:3], 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#CD534CFF"),
+  stroke_size = 0.5, set_name_size = 4
+)
+
+
+# Helper function to display Venn diagram
+display_venn <- function(x, ...){
+  library(VennDiagram)
+  grid.newpage()
+  venn_object <- venn.diagram(x, filename = NULL, ...)
+  grid.draw(venn_object)
+}
+
+
+display_venn(x)
+display_venn(x[1:3])
+
+
+# get lists of genes
+selected_genomes = gene_pa %>% 
+  select(Gene, NT12001_189:NT12049_53) %>% 
+  pivot_longer(-Gene,
+               names_to = 'Genome', 
+               values_to = 'gene_pa') %>% 
+  filter(gene_pa == 1)
+
+genes_list = list()
+for (genome in unique(selected_genomes$Genome)){
+  tmp = selected_genomes %>% filter(Genome == genome) %>% pull(Gene)
+  genes_list[[genome]] = tmp
+}
+
+display_venn(genes_list[1:6])
+
+library(RColorBrewer)
+n <- 60
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, 
+                           qual_col_pals$maxcolors, 
+                           rownames(qual_col_pals)))
+pie(rep(1,n), col=sample(col_vector, n))
+
+ggvenn(
+  genes_list[1:8], 
+  fill_color = col_vector,
+  stroke_size = 0.5, set_name_size = 4
+)
+
+display_venn(genes_list[c(1,5,8,19)])
+
+venn.diagram(x = genes_list[c(1,5,8,19,25)],
+             filename = 'venn_test_genomes.png',
+             output = TRUE,
+             cat.cex = 0,
+             imagetype = 'png')
+
+
