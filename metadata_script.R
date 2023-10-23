@@ -311,3 +311,45 @@ write.xlsx(plates_list, 'RNAseq_project/RNAseq_plate_layout_multipage.xlsx',
 
 
 
+Metadata_phenotype_extended = read_excel("Metadata_phenotype_extended.xlsx")
+
+
+Metadata_phenotype_extended %>% 
+  filter(Discard == 'No',
+         Origin %in% c('AUS', 'ECOREF')) %>% 
+  distinct(fasta, .keep_all = T) %>% count(extended_phenotype)
+
+
+
+
+Metadata_phenotype_extended %>% 
+  filter(Discard == 'No',
+         Origin %in% c('AUS', 'ECOREF')) %>% 
+  distinct(fasta, .keep_all = T) %>% 
+  filter(phylogroup != 'E or cladeI') %>% 
+  count(phylogroup, extended_phenotype) %>% 
+  group_by(extended_phenotype) %>% 
+  mutate(prop = (n / sum(n)) * 100) %>% 
+  drop_na() %>% 
+  filter(extended_phenotype != 'Unknown') %>% 
+  ggplot(aes(y = prop, x = phylogroup, fill = phylogroup)) +
+  geom_bar(stat = 'identity', color = 'black') +
+  facet_wrap(~extended_phenotype) +
+  scale_fill_manual(
+    values = c(
+    'A' = '#EA392D',
+    'B1' = '#277FEA',
+    'B2' = '#0FEB3B',
+    'C' = '#5910EA',
+    'D' = '#EB8418',
+    'E' = '#EAE21D',
+    'F' = '#967944',
+    'G' = '#E11CEB')
+  ) +
+  labs(
+    y = '% of total',
+    x = NULL
+  ) +
+  theme_cowplot(14)
+
+

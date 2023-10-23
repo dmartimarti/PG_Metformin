@@ -37,7 +37,7 @@ cd /Users/danmarti/Documents/MRC_postdoc/Pangenomic/pangenome_analysis/ALL/phylo
 cat <(head -1 worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) <(awk '$4<3.10E-04 {print $0}' worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) > wp_ALL_no_biofilm_significant_kmers.txt
 
 
-cat <(head -1 worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) <(awk '$3<3.10E-05 || $4<3.10E-05 {print $0}' worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) > wp_ALL_no_biofilm_significant_kmers.txt
+cat <(head -1 worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) <(awk '$3<3.10E-04 || $4<3.10E-04 {print $0}' worm_phenotype_ALL_no_biofilm_UNITIGS.tsv) > wp_ALL_no_biofilm_significant_kmers.txt
 
 
 # Mapping to a single reference
