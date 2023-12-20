@@ -111,18 +111,19 @@ ggsave(file = here('summary','KEIO_ASKA_summary_v2.pdf'),
 # Tukey test --------------------------------------------------------------
 library(ODWGtools)
 
-# I am selecting the top and bottom genes from each screen by calculating the Tukey outliers
+# I am selecting the top and bottom genes from each screen 
+# by calculating the Tukey outliers
 # from each distribution
 
 # get outliers from keio
 keio.out = keio.rat %>% 
-  mutate(outliers = tukey_outliers(.$keio_mean)) %>% 
+  mutate(outliers = outlier_tukey(.$keio_mean)) %>% 
   filter(outliers != 'not outlier') %>% 
   mutate(direction = case_when(keio_mean > 0.5 ~ 'top',
                               keio_mean <= 0.5 ~ 'bottom')) 
 # get outliers from aska
 aska.out = aska.rat %>% 
-  mutate(outliers = tukey_outliers(.$aska_mean)) %>% 
+  mutate(outliers = outlier_tukey(.$aska_mean)) %>% 
   filter(outliers != 'not outlier') %>% 
   mutate(direction = case_when(aska_mean > 0.5 ~ 'top',
                                aska_mean <= 0.5 ~ 'bottom')) 
